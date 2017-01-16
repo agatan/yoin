@@ -10,12 +10,12 @@ struct StateHash(i32);
 pub struct StateId(usize);
 
 #[derive(Debug, Clone, Eq)]
-struct State {
-    id: StateId,
-    is_final: bool,
-    trans: HashMap<u8, Rc<RefCell<State>>>,
-    output: HashMap<u8, Vec<u8>>,
-    state_output: HashSet<Vec<u8>>,
+pub struct State {
+    pub id: StateId,
+    pub is_final: bool,
+    pub trans: HashMap<u8, Rc<RefCell<State>>>,
+    pub output: HashMap<u8, Vec<u8>>,
+    pub state_output: HashSet<Vec<u8>>,
     hash_code: StateHash,
 }
 
@@ -130,7 +130,7 @@ fn common_prefix_len(a: &[u8], b: &[u8]) -> usize {
 #[derive(Debug, Clone)]
 pub struct Mast {
     initial: Rc<RefCell<State>>,
-    states: Vec<Rc<RefCell<State>>>,
+    pub states: Vec<Rc<RefCell<State>>>,
 }
 
 
