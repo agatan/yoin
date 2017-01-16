@@ -25,8 +25,9 @@ fn main() {
     }
 
     println!("build IR and interpret");
-    for out in ir::run(&m, b"feb").unwrap() {
-        let buf : [u8; 4] = unsafe { ::std::mem::transmute(out) };
-        println!("{:?}", buf);
+    for out in ir::run(&m, b"feba").unwrap() {
+        let (n, substr) = out;
+        let buf : [u8; 4] = unsafe { ::std::mem::transmute(n) };
+        println!("{}: {:?}", String::from_utf8_lossy(substr), buf);
     }
 }
