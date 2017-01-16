@@ -100,10 +100,7 @@ impl StateTable {
         }
     }
 
-    fn find_minimized(&mut self,
-                      states: &mut Vec<Rc<RefCell<State>>>,
-                      state: Rc<RefCell<State>>)
-                      -> Rc<RefCell<State>> {
+    fn find_minimized(&mut self, state: Rc<RefCell<State>>) -> Rc<RefCell<State>> {
         match self.get(&state) {
             Some(s) => s,
             None => {
@@ -111,7 +108,6 @@ impl StateTable {
                 s.id = StateId(self.size);
                 let r = Rc::new(RefCell::new(s));
                 self.insert(r.clone());
-                states.push(r.clone());
                 r
             }
         }
@@ -152,8 +148,6 @@ impl Mast {
         let mut chars = HashSet::new();
         let mut last_input: &[u8] = b"";
 
-        let mut states = Vec::new();
-
         for (input, output) in pairs {
             debug_assert!(input >= prev_word);
             // hold the last input.
@@ -172,7 +166,7 @@ impl Mast {
             for i in (prefix_len..prev_word.len()).map(|x| x + 1).rev() {
                 let target = buf[i].clone();
                 let mut s = buf[i - 1].borrow_mut();
-                s.set_transition(prev_word[i - 1], table.find_minimized(&mut states, target));
+                s.set_transition(prev_word[i - 1], table.find_minimized(target));
             }
             for i in (prefix_len + 1)..(input.len() + 1) {
                 // buf[i].borrow_mut().clear();
@@ -240,10 +234,10 @@ impl Mast {
         for i in (0..last_input.len()).map(|x| x + 1).rev() {
             let target = buf[i].clone();
             let mut s = buf[i - 1].borrow_mut();
-            s.set_transition(prev_word[i - 1], table.find_minimized(&mut states, target));
+            s.set_transition(prev_word[i - 1], table.find_minimized(target));
         }
 
-        let initial_state = table.find_minimized(&mut states, buf[0].clone());
+        let initial_state = table.find_minimized(buf[0].clone());
 
         Mast {
             initial: initial_state,
@@ -310,16 +304,20 @@ impl Mast {
             let n = unsafe { ::std::mem::transmute(buf) };
             Ok(vec![n])
         } else {
-            let results = state.borrow().state_output.iter().map(|os| {
-                let mut b = buf.clone();
-                let mut i = i;
-                for o in os {
-                    b[i] = *o;
-                    i += 1;
-                }
-                debug_assert!(i == 4);
-                unsafe { ::std::mem::transmute(b) }
-            }).collect();
+            let results = state.borrow()
+                .state_output
+                .iter()
+                .map(|os| {
+                    let mut b = buf.clone();
+                    let mut i = i;
+                    for o in os {
+                        b[i] = *o;
+                        i += 1;
+                    }
+                    debug_assert!(i == 4);
+                    unsafe { ::std::mem::transmute(b) }
+                })
+                .collect();
             Ok(results)
         }
     }
