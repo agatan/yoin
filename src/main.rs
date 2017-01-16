@@ -17,9 +17,16 @@ fn main() {
             (x, out)
         });
     let m = mast::Mast::build(samples);
+
+    println!("build MAST and interpret");
     for out in m.run(b"feb").unwrap() {
         let buf : [u8; 4] = unsafe { ::std::mem::transmute(out) };
         println!("{:?}", buf);
     }
-    println!("{:?}", ir::IrBuilder::new().build(&m));
+
+    println!("build IR and interpret");
+    for out in ir::run(&m, b"feb").unwrap() {
+        let buf : [u8; 4] = unsafe { ::std::mem::transmute(out) };
+        println!("{:?}", buf);
+    }
 }

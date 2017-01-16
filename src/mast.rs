@@ -9,6 +9,8 @@ struct StateHash(i32);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct StateId(usize);
 
+pub const DUMMY_STATE_ID: StateId = StateId(!0);
+
 #[derive(Debug, Clone, Eq)]
 pub struct State {
     pub id: StateId,
@@ -30,7 +32,7 @@ impl ::std::cmp::PartialEq<State> for State {
 impl State {
     fn new() -> State {
         State {
-            id: StateId(!0),
+            id: DUMMY_STATE_ID,
             is_final: false,
             trans: HashMap::new(),
             output: HashMap::new(),
@@ -320,5 +322,9 @@ impl Mast {
                 .collect();
             Ok(results)
         }
+    }
+
+    pub fn initial_state_id(&self) -> StateId {
+        self.initial.borrow().id
     }
 }

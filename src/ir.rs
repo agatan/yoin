@@ -73,22 +73,58 @@ impl StateIr {
 
 pub type IrTable = HashMap<StateId, StateIr>;
 
-#[derive(Debug, Clone)]
-pub struct IrBuilder {
-    table: IrTable,
-}
-
-impl IrBuilder {
-    pub fn new() -> Self {
-        IrBuilder { table: HashMap::new() }
-    }
-
-    pub fn build(mut self, mast: &Mast) -> IrTable {
-        for state in mast.states.iter() {
+pub fn build(mast: &Mast) -> IrTable {
+    let mut table = IrTable::new();
+    for state in mast.states.iter() {
             let ir = StateIr::new(&*state.borrow());
             let id = state.borrow().id;
-            self.table.insert(id, ir);
+            table.insert(id, ir);
         }
-        self.table
+    table
+}
+
+pub fn run(mast: &Mast, input: &[u8]) -> Result<Vec<i32>, String> {
+    fn bytes_to_i32(bytes: &[u8]) -> Result<i32, String> {
+        if bytes.len() != 4 {
+            Err(format!("output byte length is not 4, got {}", bytes.len()))
+        } else {
+            let ptr: *const i32 = unsafe { ::std::mem::transmute(bytes.as_ptr()) };
+            let i = unsafe { *ptr };
+            Ok(i)
+        }
+    }
+    let ir_table = build(mast);
+    let mut state_ir = &ir_table[&mast.initial_state_id()];
+    let mut data = Vec::new();
+    let mut i = 0;
+    loop {
+        for ir in state_ir.iseq.iter() {
+            match *ir {
+                Ir::Accept => return bytes_to_i32(&data).map(|i| vec![i]),
+                Ir::AcceptWith(ref tails) => {
+                    return tails.iter().map(|tail| {
+                        let mut buf = data.clone();
+                        buf.extend_from_slice(tail);
+                        bytes_to_i32(&buf)
+                    }).collect()
+                }
+                Ir::Break => return Err("input does not match".to_string()),
+                Ir::Jump{ ch, ref state_id } => {
+                    if ch == input[i] {
+                        i += 1;
+                        state_ir = &ir_table[state_id];
+                        break;
+                    }
+                }
+                Ir::Output{ ch, ref state_id, ref bytes } => {
+                    if ch == input[i] {
+                        i += 1;
+                        data.extend_from_slice(bytes);
+                        state_ir = &ir_table[state_id];
+                        break;
+                    }
+                }
+            }
+        }
     }
 }
