@@ -76,10 +76,10 @@ pub type IrTable = HashMap<StateId, StateIr>;
 pub fn build(mast: &Mast) -> IrTable {
     let mut table = IrTable::new();
     for state in mast.states.iter() {
-            let ir = StateIr::new(&*state.borrow());
-            let id = state.borrow().id;
-            table.insert(id, ir);
-        }
+        let ir = StateIr::new(&*state.borrow());
+        let id = state.borrow().id;
+        table.insert(id, ir);
+    }
     table
 }
 
@@ -102,21 +102,23 @@ pub fn run(mast: &Mast, input: &[u8]) -> Result<Vec<i32>, String> {
             match *ir {
                 Ir::Accept => return bytes_to_i32(&data).map(|i| vec![i]),
                 Ir::AcceptWith(ref tails) => {
-                    return tails.iter().map(|tail| {
-                        let mut buf = data.clone();
-                        buf.extend_from_slice(tail);
-                        bytes_to_i32(&buf)
-                    }).collect()
+                    return tails.iter()
+                        .map(|tail| {
+                            let mut buf = data.clone();
+                            buf.extend_from_slice(tail);
+                            bytes_to_i32(&buf)
+                        })
+                        .collect()
                 }
                 Ir::Break => return Err("input does not match".to_string()),
-                Ir::Jump{ ch, ref state_id } => {
+                Ir::Jump { ch, ref state_id } => {
                     if ch == input[i] {
                         i += 1;
                         state_ir = &ir_table[state_id];
                         break;
                     }
                 }
-                Ir::Output{ ch, ref state_id, ref bytes } => {
+                Ir::Output { ch, ref state_id, ref bytes } => {
                     if ch == input[i] {
                         i += 1;
                         data.extend_from_slice(bytes);
@@ -126,5 +128,38 @@ pub fn run(mast: &Mast, input: &[u8]) -> Result<Vec<i32>, String> {
                 }
             }
         }
+    }
+}
+
+#[test]
+fn test_run() {
+    use std::collections::HashSet;
+
+    let samples: Vec<(&[u8], [u8; 4])> = vec![(b"apr", [0, 0, 3, 0]),
+                                              (b"aug", [0, 0, 3, 1]),
+                                              (b"dec", [0, 0, 3, 1]),
+                                              (b"feb", [0, 0, 2, 8]),
+                                              (b"feb", [0, 0, 2, 9]),
+                                              (b"feba", [0, 0, 3, 1]),
+                                              (b"jul", [0, 0, 3, 0]),
+                                              (b"jun", [0, 0, 3, 1])];
+    let samples = samples.into_iter()
+        .map(|(x, bytes)| {
+            let out: i32 = unsafe { ::std::mem::transmute(bytes) };
+            (x, out)
+        });
+    let m = Mast::build(samples);
+
+    let tests: Vec<(&[u8], _)> = vec![(b"feb", vec![[0, 0, 2, 8], [0, 0, 2, 9]]),
+                                      (b"feba", vec![[0, 0, 3, 1]])];
+
+    for (input, expected) in tests {
+        let out: HashSet<_> = run(&m, input)
+            .unwrap()
+            .into_iter()
+            .map(|out| unsafe { ::std::mem::transmute::<i32, [u8; 4]>(out) })
+            .collect();
+        let expected_set = expected.into_iter().collect();
+        assert_eq!(out, expected_set);
     }
 }
