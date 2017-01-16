@@ -273,6 +273,42 @@ impl Mast {
         }
         println!("}}");
     }
+
+    fn run(&self, input: &[u8]) -> Result<Vec<i32>, String> {
+        let mut state = self.initial.clone();
+        let mut buf = [0; 4];
+        let mut i = 0;
+        for &c in input {
+            if let Some(os) = state.borrow().output(c) {
+                for o in os {
+                    buf[i] = *o;
+                    i += 1;
+                }
+            }
+            let new_state = match state.borrow().transition(c) {
+                Some(s) => s,
+                None => return Err(format!("transition for {} not found", c as char)),
+            };
+            state = new_state;
+        }
+        if state.borrow().state_output.is_empty() {
+            debug_assert!(i == 4);
+            let n = unsafe { ::std::mem::transmute(buf) };
+            Ok(vec![n])
+        } else {
+            let results = state.borrow().state_output.iter().map(|os| {
+                let mut b = buf.clone();
+                let mut i = i;
+                for o in os {
+                    b[i] = *o;
+                    i += 1;
+                }
+                debug_assert!(i == 4);
+                unsafe { ::std::mem::transmute(b) }
+            }).collect();
+            Ok(results)
+        }
+    }
 }
 
 fn main() {
@@ -289,5 +325,9 @@ fn main() {
             let out: i32 = unsafe { ::std::mem::transmute(bytes) };
             (x, out)
         });
-    Mast::build(samples).print_dot();
+    let mast = Mast::build(samples);
+    for out in mast.run(b"feb").unwrap() {
+        let buf : [u8; 4] = unsafe { ::std::mem::transmute(out) };
+        println!("{:?}", buf);
+    }
 }
