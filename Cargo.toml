@@ -1,8 +1,6 @@
 [package]
-name = "kagome"
+name = "yoin"
 version = "0.1.0"
 authors = ["agatan <agatan039@gmail.com>"]
 
 [dependencies]
-env_logger = "0.4.0"
-log = "*"
