@@ -21,4 +21,5 @@ fn main() {
         let buf : [u8; 4] = unsafe { ::std::mem::transmute(out) };
         println!("{:?}", buf);
     }
+    println!("{:?}", ir::IrBuilder::new().build(&m));
 }

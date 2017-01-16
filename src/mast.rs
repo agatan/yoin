@@ -46,7 +46,7 @@ impl State {
         self.trans.insert(c, to);
     }
 
-    fn output(&self, c: u8) -> Option<&[u8]> {
+    pub fn output(&self, c: u8) -> Option<&[u8]> {
         self.output.get(&c).map(|x| x.as_slice())
     }
 
@@ -115,6 +115,16 @@ impl StateTable {
                 r
             }
         }
+    }
+
+    fn states(&self) -> Vec<Rc<RefCell<State>>> {
+        let mut states = Vec::new();
+        for (_, ss) in &self.table {
+            for s in ss {
+                states.push(s.clone());
+            }
+        }
+        states
     }
 }
 
@@ -234,10 +244,10 @@ impl Mast {
         }
 
         let initial_state = table.find_minimized(&mut states, buf[0].clone());
-        states.push(buf[0].clone());
+
         Mast {
             initial: initial_state,
-            states: states,
+            states: table.states(),
         }
     }
 

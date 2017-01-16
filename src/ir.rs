@@ -10,14 +10,36 @@ pub enum Ir {
         state_id: StateId,
         bytes: Vec<u8>,
     },
-    /// same as `Output`, but break if not matched.
-    OutBreak { ch: u8 },
     /// add offset to pc if ch matches input.
     Jump { ch: u8, state_id: StateId },
     /// accept and stop execution
     Accept,
     /// accept with tail output set
     AcceptWith(Vec<Vec<u8>>),
+    /// interrupt execution and return
+    Break,
+}
+
+impl Ir {
+    fn from_transition(from: &State, ch: u8, to: &State) -> Self {
+        let to_id = to.id;
+        match from.output(ch) {
+            Some(out) if !out.is_empty() => {
+                let out = Vec::from(out);
+                Ir::Output {
+                    ch: ch,
+                    state_id: to_id,
+                    bytes: out,
+                }
+            }
+            _ => {
+                Ir::Jump {
+                    ch: ch,
+                    state_id: to_id,
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -28,7 +50,24 @@ pub struct StateIr {
 
 impl StateIr {
     fn new(state: &State) -> StateIr {
-        unimplemented!()
+        let mut iseq = Vec::new();
+        if state.is_final {
+            if state.state_output.is_empty() {
+                iseq.push(Ir::Accept);
+            } else {
+                let outputs = state.state_output.iter().cloned().collect();
+                iseq.push(Ir::AcceptWith(outputs));
+            }
+        } else {
+            for (&ch, to) in state.trans.iter() {
+                iseq.push(Ir::from_transition(state, ch, &*to.borrow()));
+            }
+            iseq.push(Ir::Break);
+        }
+        StateIr {
+            id: state.id,
+            iseq: iseq,
+        }
     }
 }
 
