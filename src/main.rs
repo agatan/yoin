@@ -1,4 +1,6 @@
 pub mod mast;
+pub mod ir;
+pub mod op;
 
 fn main() {
     let samples: Vec<(&[u8], [u8; 4])> = vec![(b"apr", [0, 0, 3, 0]),

@@ -6,9 +6,12 @@ use std::collections::hash_map::Entry;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct StateHash(i32);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct StateId(usize);
+
 #[derive(Debug, Clone, Eq)]
 struct State {
-    id: usize,
+    id: StateId,
     is_final: bool,
     trans: HashMap<u8, Rc<RefCell<State>>>,
     output: HashMap<u8, Vec<u8>>,
@@ -27,7 +30,7 @@ impl ::std::cmp::PartialEq<State> for State {
 impl State {
     fn new() -> State {
         State {
-            id: !0,
+            id: StateId(!0),
             is_final: false,
             trans: HashMap::new(),
             output: HashMap::new(),
@@ -105,7 +108,7 @@ impl StateTable {
             Some(s) => s,
             None => {
                 let mut s = state.borrow().clone();
-                s.id = self.size;
+                s.id = StateId(self.size);
                 let r = Rc::new(RefCell::new(s));
                 self.insert(r.clone());
                 states.push(r.clone());
@@ -246,10 +249,10 @@ impl Mast {
         println!("\tnode [shape=circle]");
         for s in states {
             if s.borrow().is_final {
-                println!("\t{} [peripheries = 2];", s.borrow().id);
+                println!("\t{:?} [peripheries = 2];", s.borrow().id);
             }
         }
-        println!("\t{} [peripheries = 3];", initial.borrow().id);
+        println!("\t{:?} [peripheries = 3];", initial.borrow().id);
 
         let mut stack = Vec::new();
         let mut done = StateTable::new();
@@ -258,7 +261,7 @@ impl Mast {
             done.insert(s.clone());
             let state = s.borrow();
             for (c, to) in &state.trans {
-                print!("\t{} -> {} [label=\"{}/{:?}",
+                print!("\t{:?} -> {:?} [label=\"{}/{:?}",
                        state.id,
                        to.borrow().id,
                        *c as char,
