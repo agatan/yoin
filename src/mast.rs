@@ -137,7 +137,7 @@ fn common_prefix_len(a: &[u8], b: &[u8]) -> usize {
 
 #[derive(Debug, Clone)]
 pub struct Mast {
-    initial: Rc<RefCell<State>>,
+    pub initial: Rc<RefCell<State>>,
     pub states: Vec<Rc<RefCell<State>>>,
 }
 
