@@ -23,9 +23,11 @@ pub const OPCODE_ACCEPT_WITH: Op = Op(0b100_00000);
 
 const JUMP_SIZE_MASK: Op = Op(0b000_11_000);
 
-const DATA_SIZE_MASK: Op = Op(0b000_00_011);
+const DATA_SIZE_MASK: Op = Op(0b000_00_111);
 
 const JUMP_SIZE_OFFSET: u8 = 3;
+const JUMP_SIZE_16: u8 = 0;
+const JUMP_SIZE_32: u8 = 1;
 
 impl ops::BitOr for Op {
     type Output = Self;
@@ -103,13 +105,13 @@ impl Compiler {
 
     fn compile_jump_offset(&mut self, to: usize) -> u8 {
         // FIXME(agatan): is the offset correct?
-        let jump = self.rev_bytes.len() - to;
+        let jump = self.rev_bytes.len() - 1 - to;
         if jump < ::std::u16::MAX as usize {
             self.rev_bytes.write_u16::<BigEndian>(jump as u16).unwrap();
-            2
+            JUMP_SIZE_16
         } else {
             self.rev_bytes.write_u32::<BigEndian>(jump as u32).unwrap();
-            4
+            JUMP_SIZE_32
         }
     }
 
@@ -160,10 +162,10 @@ impl Compiler {
             self.compile_transition(state, ch, &*to.borrow());
         }
         if state.is_final {
-            if state.state_output.is_empty() {
-                self.rev_bytes.push(OPCODE_ACCEPT.0);
-            } else {
-                for output in state.state_output.iter() {
+            for output in state.state_output.iter() {
+                if output.is_empty() {
+                    self.rev_bytes.push(OPCODE_ACCEPT.0);
+                } else {
                     self.compile_accept_with(output);
                 }
             }
@@ -222,7 +224,7 @@ pub struct Machine<'a> {
     len: usize,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Accept {
     pub len: usize,
     pub value: i32,
@@ -242,21 +244,23 @@ impl<'a> Machine<'a> {
 
     fn read_u16(&mut self) -> u16 {
         let mut from = &self.iseq[self.pc..];
+        self.pc += 2; // skip 16 bits
         from.read_u16::<LittleEndian>().unwrap()
     }
 
     fn read_u32(&mut self) -> u32 {
         let mut from = &self.iseq[self.pc..];
+        self.pc += 4; // skip 32 bits
         from.read_u32::<LittleEndian>().unwrap()
     }
 
     fn get_jump_offset(&mut self, jump_size: u8) -> Result<usize, String> {
-        let jump = if jump_size == 2 {
+        let jump = if jump_size == JUMP_SIZE_16 {
             self.read_u16() as usize
-        } else if jump_size == 4 {
+        } else if jump_size == JUMP_SIZE_32 {
             self.read_u32() as usize
         } else {
-            return Err("jump size is ill-formed".into());
+            return Err(format!("jump size is ill-formed: {}", jump_size));
         };
         Ok(jump)
     }
@@ -271,6 +275,7 @@ impl<'a> Machine<'a> {
         if cmp != self.input[self.len] {
             return Ok(());
         }
+        self.len += 1;
         self.pc += jump;
         Ok(())
     }
@@ -280,19 +285,19 @@ impl<'a> Machine<'a> {
         self.pc += 1;
         let cmp = self.iseq[self.pc];
         self.pc += 1;
-
         let jump = self.get_jump_offset(op.jump_bytes())?;
         if cmp != self.input[self.len] {
             self.pc += op.data_bytes() as usize; // skip unused data bytes.
             return Ok(());
         }
+        self.len += 1;
         for _ in 0..op.data_bytes() {
             debug_assert!(self.data_len < 4, "output data is not 4 bytes");
             self.data[self.data_len as usize] = self.iseq[self.pc];
             self.data_len += 1;
             self.pc += 1;
         }
-        self.pc += jump;
+        self.pc += jump - op.data_bytes() as usize;
         Ok(())
     }
 }
@@ -329,6 +334,7 @@ impl<'a> Iterator for Machine<'a> {
                 }
                 OPCODE_ACCEPT_WITH => {
                     let save = self.data_len;
+                    self.pc += 1; // skip OPCODE_ACCEPT_WITH
                     for _ in 0..op.data_bytes() {
                         debug_assert!(self.data_len < 4);
                         self.data[self.data_len as usize] = self.iseq[self.pc];
@@ -344,7 +350,7 @@ impl<'a> Iterator for Machine<'a> {
                     self.data_len = save;
                     return Some(Ok(accept));
                 }
-                _ => return Some(Err("unknown op code".into())),
+                op => return Some(Err(format!("unknown op code: {:08b}", op.0))),
             }
         }
     }
@@ -361,4 +367,36 @@ pub fn run_iter<'a>(iseq: &'a [u8], input: &'a [u8]) -> Machine<'a> {
 
 pub fn run(iseq: &[u8], input: &[u8]) -> Result<Vec<Accept>, String> {
     run_iter(iseq, input).collect()
+}
+
+#[test]
+fn test_build() {
+    let samples: Vec<(&[u8], i32)> = vec![(b"a", !0)];
+    let expected: Vec<u8> = vec![0b00000100, 0b01100001, 0b00000101, 0b00000000, 0b11111111,
+                                 0b11111111, 0b11111111, 0b11111111, 0b01000000, 0b01100000,
+                                 0b01000000];
+    let m = Mast::build(samples);
+    let bytes = build(m);
+    assert_eq!(bytes, expected);
+}
+
+#[test]
+fn test_run() {
+    use std::collections::HashSet;
+
+    let samples: Vec<(&[u8], i32)> = vec![(b"ab", 0xFF), (b"abc", 0), (b"abc", !0), (b"abd", 1)];
+    let iseq = build(Mast::build(samples));
+    let accs: HashSet<_> = run(&iseq, b"abc").unwrap().into_iter().collect();
+    let expects: HashSet<_> = vec![Accept {
+                                       len: 2,
+                                       value: 0xFF,
+                                   },
+                                   Accept { len: 3, value: 0 },
+                                   Accept {
+                                       len: 3,
+                                       value: !0,
+                                   }]
+        .into_iter()
+        .collect();
+    assert_eq!(accs, expects);
 }
