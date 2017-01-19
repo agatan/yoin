@@ -1,50 +1,183 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::{HashSet, HashMap};
+use std::ops;
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::{LittleEndian, BigEndian, WriteBytesExt};
 
 use mast::{State, Mast, StateId};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Opcode {
-    /// Output variadic bytes. parameters: character, offset, size, data, data, ...
-    Output,
-    /// Jump if matched. parameter: character, offset.
-    Jump,
-    /// Stop execution
-    Break,
-    /// Accept curreny data.
-    Accept,
-    /// Accept with variadic data. parameters: size, data, data, ...
-    AcceptWith,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Op(pub u8);
+
+const OPCODE_MASK: Op = Op(0b111_00000);
+
+pub const OPCODE_OUTJUMP: Op = Op(0b000_00000);
+pub const OPCODE_JUMP: Op = Op(0b001_00000);
+pub const OPCODE_BREAK: Op = Op(0b010_00000);
+pub const OPCODE_ACCEPT: Op = Op(0b011_00000);
+pub const OPCODE_ACCEPT_WITH: Op = Op(0b100_00000);
+
+const JUMP_SIZE_MASK: Op = Op(0b000_11_000);
+
+const DATA_SIZE_MASK: Op = Op(0b000_00_011);
+
+const JUMP_SIZE_OFFSET: u8 = 3;
+
+impl ops::BitOr for Op {
+    type Output = Self;
+    fn bitor(self, rhs: Op) -> Self {
+        Op(self.0 | rhs.0)
+    }
 }
 
-impl Opcode {
-    fn jump(rev_bytes: &mut Vec<u8>, ch: u8, to: u32) {
-        let bytes_size = rev_bytes.len() as u32;
-        let jump_offset = bytes_size - to;
-        rev_bytes.write_u32::<LittleEndian>(jump_offset).unwrap();
-        rev_bytes.push(ch);
-        rev_bytes.push(Opcode::Jump as u8);
+impl ops::BitOrAssign for Op {
+    fn bitor_assign(&mut self, rhs: Op) {
+        self.0 |= rhs.0
+    }
+}
+
+impl ops::BitAnd for Op {
+    type Output = Self;
+    fn bitand(self, rhs: Op) -> Self {
+        Op(self.0 & rhs.0)
+    }
+}
+
+impl ops::BitAndAssign for Op {
+    fn bitand_assign(&mut self, rhs: Op) {
+        self.0 &= rhs.0
+    }
+}
+
+impl ops::BitOr<u8> for Op {
+    type Output = Self;
+    fn bitor(self, rhs: u8) -> Self {
+        Op(self.0 | rhs)
+    }
+}
+
+impl ops::BitOrAssign<u8> for Op {
+    fn bitor_assign(&mut self, rhs: u8) {
+        self.0 |= rhs
+    }
+}
+
+impl Op {
+    pub fn code(self) -> Op {
+        self & OPCODE_MASK
     }
 
-    fn output(rev_bytes: &mut Vec<u8>, ch: u8, to: u32, data: &[u8]) {
-        let size = data.len() as u32;
-        for b in data.iter().rev() {
-            rev_bytes.push(*b);
-        }
-        rev_bytes.write_u32::<LittleEndian>(size).unwrap();
-        Self::jump(rev_bytes, ch, to);
+    pub fn jump_bytes(self) -> u8 {
+        (self & JUMP_SIZE_MASK).0 >> JUMP_SIZE_OFFSET
     }
 
-    fn accept_with(rev_bytes: &mut Vec<u8>, data: &[u8]) {
-        let size = data.len() as u32;
-        for b in data.iter().rev() {
-            rev_bytes.push(*b);
+    fn with_jump_bytes(mut self, size: u8) -> Op {
+        self.0 |= (size << JUMP_SIZE_OFFSET) & JUMP_SIZE_MASK.0;
+        self
+    }
+
+    pub fn data_bytes(self) -> u8 {
+        self.0 & DATA_SIZE_MASK.0
+    }
+
+    fn with_data_bytes(mut self, size: u8) -> Op {
+        self.0 |= size & DATA_SIZE_MASK.0;
+        self
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Compiler {
+    rev_bytes: Vec<u8>,
+    jump_table: HashMap<StateId, usize>,
+}
+
+impl Compiler {
+    pub fn new() -> Self {
+        Compiler::default()
+    }
+
+    fn compile_jump_offset(&mut self, to: usize) -> u8 {
+        // FIXME(agatan): is the offset correct?
+        let jump = self.rev_bytes.len() - to;
+        if jump < ::std::u16::MAX as usize {
+            self.rev_bytes.write_u16::<BigEndian>(jump as u16).unwrap();
+            2
+        } else {
+            self.rev_bytes.write_u32::<BigEndian>(jump as u32).unwrap();
+            4
         }
-        rev_bytes.write_u32::<LittleEndian>(size).unwrap();
-        rev_bytes.push(Opcode::AcceptWith as u8);
+    }
+
+    fn compile_output(&mut self, data: &[u8]) -> u8 {
+        let data_size = data.len();
+        debug_assert!(data_size <= 4);
+        for d in data.iter().rev() {
+            self.rev_bytes.push(*d);
+        }
+        data_size as u8
+    }
+
+    fn compile_outjump(&mut self, ch: u8, to: usize, data: &[u8]) {
+        let data_size = self.compile_output(data);
+        let jump_size = self.compile_jump_offset(to);
+        let op = OPCODE_OUTJUMP.with_data_bytes(data_size).with_jump_bytes(jump_size);
+        self.rev_bytes.push(ch);
+        self.rev_bytes.push(op.0);
+    }
+
+    fn compile_jump(&mut self, ch: u8, to: usize) {
+        let jump_size = self.compile_jump_offset(to);
+        let op = OPCODE_JUMP.with_jump_bytes(jump_size);
+        self.rev_bytes.push(ch);
+        self.rev_bytes.push(op.0);
+    }
+
+    fn compile_accept_with(&mut self, data: &[u8]) {
+        debug_assert!(data.len() <= 4);
+        let op = OPCODE_ACCEPT_WITH.with_data_bytes(data.len() as u8);
+        for d in data.iter().rev() {
+            self.rev_bytes.push(*d);
+        }
+        self.rev_bytes.push(op.0);
+    }
+
+    fn compile_transition(&mut self, from: &State, ch: u8, to: &State) {
+        let to_pos = self.jump_table[&to.id];
+        match from.output(ch) {
+            Some(out) if !out.is_empty() => self.compile_outjump(ch, to_pos, out),
+            _ => self.compile_jump(ch, to_pos),
+        }
+    }
+
+    fn compile_state(&mut self, state: &State) {
+        self.rev_bytes.push(OPCODE_BREAK.0);
+        for (&ch, to) in state.trans.iter() {
+            self.compile_transition(state, ch, &*to.borrow());
+        }
+        if state.is_final {
+            if state.state_output.is_empty() {
+                self.rev_bytes.push(OPCODE_ACCEPT.0);
+            } else {
+                for output in state.state_output.iter() {
+                    self.compile_accept_with(output);
+                }
+            }
+        }
+        self.jump_table.insert(state.id, self.rev_bytes.len() - 1);
+    }
+
+    pub fn compile(&mut self, mast: Mast) {
+        let rev_sorted = rev_topological_sort(&mast);
+
+        for state in rev_sorted {
+            self.compile_state(&*state.borrow());
+        }
+    }
+
+    pub fn bytecode(&self) -> Vec<u8> {
+        self.rev_bytes.iter().rev().cloned().collect()
     }
 }
 
@@ -70,42 +203,8 @@ fn rev_topological_sort(mast: &Mast) -> Vec<Rc<RefCell<State>>> {
     rev_results
 }
 
-fn build_transition(rev_bytes: &mut Vec<u8>, jump_table: &HashMap<StateId, u32>, from: &State, ch: u8, to: &State) {
-    let to_id = to.id;
-    let to_pos = jump_table[&to_id];
-    match from.output(ch) {
-        Some(out) if !out.is_empty() => {
-            Opcode::output(rev_bytes, ch, to_pos, out)
-        },
-        _ => Opcode::jump(rev_bytes, ch, to_pos),
-    }
-}
-
-fn build_state(rev_bytes: &mut Vec<u8>, jump_table: &mut HashMap<StateId, u32>, state: &State) {
-    rev_bytes.push(Opcode::Break as u8);
-    for (&ch, to) in state.trans.iter() {
-        build_transition(rev_bytes, jump_table, state, ch, &*to.borrow());
-    }
-    if state.is_final {
-        if state.state_output.is_empty() {
-            rev_bytes.push(Opcode::Accept as u8);
-        } else {
-            for output in state.state_output.iter() {
-                Opcode::accept_with(rev_bytes, output);
-            }
-        }
-    }
-    jump_table.insert(state.id, rev_bytes.len() as u32 - 1);
-}
-
 pub fn build(mast: Mast) -> Vec<u8> {
-    let mut rev_bytes = Vec::new();
-    let mut jump_table = HashMap::<StateId, u32>::new();
-    let rev_sorted = rev_topological_sort(&mast);
-
-    for state in rev_sorted {
-        build_state(&mut rev_bytes, &mut jump_table, &*state.borrow());
-    }
-    rev_bytes.reverse();
-    rev_bytes
+    let mut compiler = Compiler::new();
+    compiler.compile(mast);
+    compiler.bytecode()
 }
