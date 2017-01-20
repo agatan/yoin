@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
 
@@ -11,6 +11,9 @@ pub struct StateId(usize);
 
 pub const DUMMY_STATE_ID: StateId = StateId(!0);
 
+const TRANS_MAGIC:i32 = 16381;
+const OUTPUT_MAGIC: i32 = 8191;
+
 #[derive(Debug, Clone, Eq)]
 pub struct State {
     pub id: StateId,
@@ -18,14 +21,14 @@ pub struct State {
     pub trans: HashMap<u8, Rc<RefCell<State>>>,
     pub output: HashMap<u8, Vec<u8>>,
     pub state_output: HashSet<Vec<u8>>,
-    hash_code: StateHash,
+    hash_code_mem: Cell<Option<StateHash>>,
 }
 
 impl ::std::cmp::PartialEq<State> for State {
     fn eq(&self, other: &State) -> bool {
         self.is_final == other.is_final && self.trans == other.trans &&
         self.output == other.output && self.state_output == other.state_output &&
-        self.hash_code == other.hash_code
+        self.hash_code() == other.hash_code()
     }
 }
 
@@ -37,7 +40,7 @@ impl State {
             trans: HashMap::new(),
             output: HashMap::new(),
             state_output: HashSet::new(),
-            hash_code: StateHash(0),
+            hash_code_mem: Cell::new(None),
         }
     }
     fn transition(&self, c: u8) -> Option<Rc<RefCell<State>>> {
@@ -59,6 +62,27 @@ impl State {
     fn set_state_output(&mut self, outs: HashSet<Vec<u8>>) {
         self.state_output = outs;
     }
+
+    fn hash_code(&self) -> StateHash {
+        match self.hash_code_mem.get() {
+            Some(s) => s,
+            None => {
+                let mut code = 0i32;
+                for (&c, bs) in &self.output {
+                    code = code.wrapping_add((c as i32) * OUTPUT_MAGIC);
+                    for &b in bs {
+                        code = code.wrapping_add((b as i32) * OUTPUT_MAGIC);
+                    }
+                }
+                for (&c, to) in &self.trans {
+                    code = code.wrapping_add((c as i32) * TRANS_MAGIC);
+                    code = code.wrapping_add((to.borrow().id.0 as i32) * TRANS_MAGIC);
+                }
+                self.hash_code_mem.set(Some(StateHash(code)));
+                StateHash(code)
+            }
+        }
+    }
 }
 
 struct StateTable {
@@ -75,7 +99,7 @@ impl StateTable {
     }
 
     fn get(&self, state: &Rc<RefCell<State>>) -> Option<Rc<RefCell<State>>> {
-        let h = state.borrow().hash_code;
+        let h = state.borrow().hash_code();
         match self.table.get(&h) {
             Some(ss) => {
                 for s in ss {
@@ -91,7 +115,7 @@ impl StateTable {
 
     fn insert(&mut self, state: Rc<RefCell<State>>) {
         self.size += 1;
-        let h = state.borrow().hash_code;
+        let h = state.borrow().hash_code();
         match self.table.entry(h) {
             Entry::Occupied(o) => {
                 o.into_mut().push(state);
