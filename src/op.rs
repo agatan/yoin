@@ -400,3 +400,25 @@ fn test_run() {
         .collect();
     assert_eq!(accs, expects);
 }
+
+#[test]
+fn test_op() {
+    use std::collections::HashSet;
+    let samples: Vec<(&[u8], i32)> = vec![(b"apr", 0),
+                                          (b"aug", 1),
+                                          (b"dec", 2),
+                                          (b"feb", 3),
+                                          (b"feb", 4),
+                                          (b"feb'", 8),
+                                          (b"jan", 5),
+                                          (b"jul", 6),
+                                          (b"jun", 7)];
+    let m = Mast::build(samples);
+    let bytecode = build(m);
+    let expected =
+        vec![Accept { len: 3, value: 3 }, Accept { len: 3, value: 4 }, Accept { len: 4, value: 8 }]
+            .into_iter()
+            .collect();
+    assert_eq!(run_iter(&bytecode, b"feb'").collect::<Result<HashSet<_>, _>>().unwrap(),
+               expected);
+}
