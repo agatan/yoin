@@ -84,6 +84,7 @@ fn main() {
     let mut out = File::create(&out).unwrap();
 
     let mut inputs = Vec::new();
+    println!("Reading csv files...");
     for entry in fs::read_dir(&dict).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
@@ -93,10 +94,14 @@ fn main() {
             }
         }
     }
+    println!("sort...");
     inputs.sort();
     let inputs = inputs.iter().map(|&(ref s, cost)| (s.as_bytes(), cost));
+    println!("building MAST");
     let m = mast::Mast::build(inputs);
+    println!("building byte code");
     let bytecodes = op::build(m);
+    println!("dumping...");
     out.write_all(&bytecodes).unwrap();
     // let bytes = include_bytes!("../nai.dic");
     // let input = "そっけ";
