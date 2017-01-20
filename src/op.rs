@@ -311,12 +311,18 @@ impl<'a> Iterator for Machine<'a> {
             match op.code() {
                 OPCODE_BREAK => return None,
                 OPCODE_JUMP => {
+                    if self.len >= self.input.len() {
+                        return None;
+                    }
                     match self.run_jump() {
                         Ok(()) => (),
                         Err(err) => return Some(Err(err)),
                     }
                 }
                 OPCODE_OUTJUMP => {
+                    if self.len >= self.input.len() {
+                        return None;
+                    }
                     match self.run_outjump() {
                         Ok(()) => (),
                         Err(err) => return Some(Err(err)),
