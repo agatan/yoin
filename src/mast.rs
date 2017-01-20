@@ -69,14 +69,14 @@ impl State {
             None => {
                 let mut code = 0i32;
                 for (&c, bs) in &self.output {
-                    code = code.wrapping_add((c as i32) * OUTPUT_MAGIC);
+                    code = code.wrapping_add((c as i32).wrapping_mul(OUTPUT_MAGIC));
                     for &b in bs {
-                        code = code.wrapping_add((b as i32) * OUTPUT_MAGIC);
+                        code = code.wrapping_add((b as i32).wrapping_mul(OUTPUT_MAGIC));
                     }
                 }
                 for (&c, to) in &self.trans {
-                    code = code.wrapping_add((c as i32) * TRANS_MAGIC);
-                    code = code.wrapping_add((to.borrow().id.0 as i32) * TRANS_MAGIC);
+                    code = code.wrapping_add((c as i32).wrapping_mul(TRANS_MAGIC));
+                    code = code.wrapping_add((to.borrow().id.0 as i32).wrapping_mul(TRANS_MAGIC));
                 }
                 self.hash_code_mem.set(Some(StateHash(code)));
                 StateHash(code)
