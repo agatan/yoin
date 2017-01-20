@@ -103,7 +103,12 @@ fn main() {
     let bytecodes = op::build(m);
     println!("dumping...");
     out.write_all(&bytecodes).unwrap();
-    // let bytes = include_bytes!("../nai.dic");
-    // let input = "そっけ";
-    // println!("{:?}", op::run(bytes, input.as_bytes()));
+    // let bytes = include_bytes!("../mecab.dic");
+    // let input = "すもも".as_bytes();
+    // println!("{:?}", op::run(bytes, input));
+    // for acc in op::run_iter(bytes, input) {
+    //     let acc = acc.unwrap();
+    //     let subs = String::from_utf8_lossy(&input[..acc.len]);
+    //     println!("{}: {}", subs, acc.value);
+    // }
 }
