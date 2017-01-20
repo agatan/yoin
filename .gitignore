@@ -1,3 +1,4 @@
 target
 Cargo.lock
 /*.dic
+!/mecab.dic
