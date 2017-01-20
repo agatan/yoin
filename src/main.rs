@@ -1,4 +1,3 @@
-extern crate byteorder;
 extern crate encoding;
 extern crate clap;
 
@@ -10,9 +9,11 @@ use clap::{App, Arg};
 use encoding::{Encoding, DecoderTrap};
 use encoding::all::EUC_JP;
 
-pub mod mast;
-pub mod ir;
-pub mod op;
+extern crate yoin;
+
+use yoin::mast;
+use yoin::ir;
+use yoin::op;
 
 fn try_fst() {
     let samples: Vec<(&[u8], [u8; 4])> = vec![(b"apr", [0, 0, 3, 0]),
@@ -68,47 +69,47 @@ fn read_csv<P: AsRef<Path>>(buf: &mut Vec<(String, i32)>, path: P) {
 }
 
 fn main() {
-    let matches = App::new("yoin")
-        .version("0.0.1")
-        .arg(Arg::with_name("dict").value_name("DIR").takes_value(true))
-        .arg(Arg::with_name("output").value_name("FILE").takes_value(true))
-        .get_matches();
-    let dict = match matches.value_of("dict") {
-        Some(dict) => dict,
-        None => {
-            try_fst();
-            return;
-        }
-    };
-    let out = matches.value_of("output").unwrap();
-    let mut out = File::create(&out).unwrap();
+    // let matches = App::new("yoin")
+    //     .version("0.0.1")
+    //     .arg(Arg::with_name("dict").value_name("DIR").takes_value(true))
+    //     .arg(Arg::with_name("output").value_name("FILE").takes_value(true))
+    //     .get_matches();
+    // let dict = match matches.value_of("dict") {
+    //     Some(dict) => dict,
+    //     None => {
+    //         try_fst();
+    //         return;
+    //     }
+    // };
+    // let out = matches.value_of("output").unwrap();
+    // let mut out = File::create(&out).unwrap();
 
-    let mut inputs = Vec::new();
-    println!("Reading csv files...");
-    for entry in fs::read_dir(&dict).unwrap() {
-        let entry = entry.unwrap();
-        let path = entry.path();
-        if let Some(ext) = path.extension() {
-            if ext == "csv" {
-                read_csv(&mut inputs, &path);
-            }
-        }
-    }
-    println!("sort...");
-    inputs.sort();
-    let inputs = inputs.iter().map(|&(ref s, cost)| (s.as_bytes(), cost));
-    println!("building MAST");
-    let m = mast::Mast::build(inputs);
-    println!("building byte code");
-    let bytecodes = op::build(m);
-    println!("dumping...");
-    out.write_all(&bytecodes).unwrap();
-    // let bytes = include_bytes!("../mecab.dic");
-    // let input = "すもも".as_bytes();
-    // println!("{:?}", op::run(bytes, input));
-    // for acc in op::run_iter(bytes, input) {
-    //     let acc = acc.unwrap();
-    //     let subs = String::from_utf8_lossy(&input[..acc.len]);
-    //     println!("{}: {}", subs, acc.value);
+    // let mut inputs = Vec::new();
+    // println!("Reading csv files...");
+    // for entry in fs::read_dir(&dict).unwrap() {
+    //     let entry = entry.unwrap();
+    //     let path = entry.path();
+    //     if let Some(ext) = path.extension() {
+    //         if ext == "csv" {
+    //             read_csv(&mut inputs, &path);
+    //         }
+    //     }
     // }
+    // println!("sort...");
+    // inputs.sort();
+    // let inputs = inputs.iter().map(|&(ref s, cost)| (s.as_bytes(), cost));
+    // println!("building MAST");
+    // let m = mast::Mast::build(inputs);
+    // println!("building byte code");
+    // let bytecodes = op::build(m);
+    // println!("dumping...");
+    // out.write_all(&bytecodes).unwrap();
+    let bytes = include_bytes!("../mecab.dic");
+    let input = "すも".as_bytes();
+    println!("{:?}", op::run(bytes, input));
+    for acc in op::run_iter(bytes, input) {
+        let acc = acc.unwrap();
+        let subs = String::from_utf8_lossy(&input[..acc.len]);
+        println!("{}: {}", subs, acc.value);
+    }
 }
