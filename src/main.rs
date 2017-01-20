@@ -32,4 +32,12 @@ fn main() {
         let buf : [u8; 4] = unsafe { ::std::mem::transmute(n) };
         println!("{}: {:?}", String::from_utf8_lossy(substr), buf);
     }
+
+    println!("bytecode interpret");
+    let bytecode = op::build(m);
+    for out in op::run_iter(&bytecode, b"feba") {
+        let out = out.unwrap();
+        let buf: [u8; 4] = unsafe { ::std::mem::transmute(out.value) };
+        println!("{}: {:?}", String::from_utf8_lossy(&b"feba"[..out.len]), buf);
+    }
 }
