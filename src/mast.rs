@@ -11,7 +11,7 @@ pub struct StateId(usize);
 
 pub const DUMMY_STATE_ID: StateId = StateId(!0);
 
-const TRANS_MAGIC:i32 = 16381;
+const TRANS_MAGIC: i32 = 16381;
 const OUTPUT_MAGIC: i32 = 8191;
 
 #[derive(Debug, Clone, Eq)]
