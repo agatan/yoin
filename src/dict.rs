@@ -18,9 +18,9 @@ impl<'a> Dict<'a> {
     }
 
     pub fn run(&self, input: &[u8]) -> Result<Vec<Morph<'a>>, String> {
-        op::run_iter(self.bytecodes, input).map(|result| {
-            result.map(|acc| self.fetch_entry(acc.value as usize))
-        }).collect()
+        op::run_iter(self.bytecodes, input)
+            .map(|result| result.map(|acc| self.fetch_entry(acc.value as usize)))
+            .collect()
     }
 
     pub fn fetch_entry(&self, offset: usize) -> Morph<'a> {

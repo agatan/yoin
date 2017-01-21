@@ -7,9 +7,7 @@ pub struct Morph<'a> {
 
 impl<'a> Morph<'a> {
     pub fn new(data: &'a str) -> Self {
-        Morph {
-            data: data,
-        }
+        Morph { data: data }
     }
 }
 

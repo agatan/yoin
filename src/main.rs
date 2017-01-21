@@ -69,7 +69,7 @@ fn read_csv<P: AsRef<Path>>(buf: &mut Vec<String>, path: P) {
     }
 }
 
-fn build_entries(entries: &[String]) -> (Vec<(&[u8], i32)>,  Vec<u8>) {
+fn build_entries(entries: &[String]) -> (Vec<(&[u8], i32)>, Vec<u8>) {
     let mut inputs = Vec::new();
     let mut bytes = Vec::new();
     for entry in entries {
@@ -84,7 +84,7 @@ fn build_entries(entries: &[String]) -> (Vec<(&[u8], i32)>,  Vec<u8>) {
 }
 
 fn build() {
-let matches = App::new("yoin")
+    let matches = App::new("yoin")
         .version("0.0.1")
         .arg(Arg::with_name("dict").value_name("DIR").takes_value(true))
         .arg(Arg::with_name("output").value_name("FILE").takes_value(true))
