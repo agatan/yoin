@@ -57,7 +57,8 @@ fn run() {
 fn main() {
     let matches = App::new("yoin-build")
         .version("0.0.1")
-        .arg(Arg::with_name("dict").value_name("DIR").takes_value(true))
+        .arg(Arg::with_name("dict").value_name("DIR").help("directory that contains dictionaries").takes_value(true))
+        .arg(Arg::with_name("outdir").value_name("OUTDIR").help("output directory").takes_value(true))
         .get_matches();
     let dict = match matches.value_of("dict") {
         Some(dict) => dict,
@@ -65,7 +66,14 @@ fn main() {
             return;
         }
     };
-
+    let outdir_name = match matches.value_of("outdir") {
+        Some(dir) => dir,
+        None => ".",
+    };
+    let outdir = Path::new(outdir_name);
+    if !outdir.is_dir() {
+        fs::create_dir_all(&outdir).unwrap();
+    }
     let mut morphs = Vec::new();
     println!("Reading csv files...");
     for entry in fs::read_dir(&dict).unwrap() {
@@ -85,8 +93,10 @@ fn main() {
     println!("building byte code");
     let bytecodes = op::build(m);
     println!("dumping...");
-    let mut out = File::create("mecab.dic").unwrap();
+    let dic_path = outdir.join("mecab.dic");
+    let mut out = File::create(dic_path).unwrap();
     out.write_all(&bytecodes).unwrap();
-    let mut out = File::create("mecab.entries").unwrap();
+    let entries_path = outdir.join("mecab.entries");
+    let mut out = File::create(entries_path).unwrap();
     out.write_all(&entries).unwrap();
 }
