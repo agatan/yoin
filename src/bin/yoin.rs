@@ -6,8 +6,6 @@ use std::env;
 extern crate yoin;
 
 use yoin::dict;
-use yoin::mast;
-use yoin::op;
 
 fn main() {
     let bytecodes = include_bytes!("../../mecab.dic");
