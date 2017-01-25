@@ -11,10 +11,9 @@ use encoding::{Encoding, DecoderTrap};
 use encoding::all::EUC_JP;
 use byteorder::{LittleEndian, WriteBytesExt};
 
-extern crate yoin;
+extern crate yoin_fst as fst;
 
-use yoin::mast;
-use yoin::op;
+use fst::Fst;
 
 fn read_csv<P: AsRef<Path>>(buf: &mut Vec<String>, path: P) {
     let mut file = File::open(path).unwrap();
@@ -74,14 +73,12 @@ fn main() {
     let (mut inputs, entries) = build_entries(&morphs);
     println!("sort...");
     inputs.sort();
-    println!("building MAST");
-    let m = mast::Mast::build(inputs);
-    println!("building byte code");
-    let bytecodes = op::build(m);
+    println!("building MAST and bytecode");
+    let f = Fst::build(inputs);
     println!("dumping...");
     let dic_path = outdir.join("mecab.dic");
     let mut out = File::create(dic_path).unwrap();
-    out.write_all(&bytecodes).unwrap();
+    out.write_all(f.bytecode()).unwrap();
     let entries_path = outdir.join("mecab.entries");
     let mut out = File::create(entries_path).unwrap();
     out.write_all(&entries).unwrap();
