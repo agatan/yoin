@@ -11,10 +11,10 @@ pub struct Dict<'a> {
 }
 
 impl<'a> Dict<'a> {
-    pub fn from_bytes(bytecodes: &'a [u8], entries: &'a [u8]) -> Dict<'a> {
+    pub unsafe fn from_bytes(bytecodes: &'a [u8], entries: &'a [u8]) -> Dict<'a> {
         Dict {
             entries: entries,
-            fst: unsafe { Fst::from_bytes(bytecodes) },
+            fst: Fst::from_bytes(bytecodes),
         }
     }
 

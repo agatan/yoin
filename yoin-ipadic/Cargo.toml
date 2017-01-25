@@ -5,3 +5,6 @@ authors = ["agatan <agatan039@gmail.com>"]
 
 [dependencies]
 yoin-fst = { path = "../yoin-fst" }
+
+[features]
+build-ipadic = []
