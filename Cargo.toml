@@ -5,6 +5,7 @@ authors = ["agatan <agatan039@gmail.com>"]
 
 [dependencies]
 yoin-fst = { path = "./yoin-fst" }
+yoin-ipadic = { path = "./yoin-ipadic" }
 byteorder = "1.0.0"
 encoding = "0.2"
 clap = "2.20"
