@@ -2,7 +2,6 @@ extern crate encoding;
 extern crate clap;
 extern crate byteorder;
 
-use std::env;
 use std::fs::{self, File};
 use std::path::Path;
 use std::io::prelude::*;
@@ -10,14 +9,12 @@ use std::io::prelude::*;
 use clap::{App, Arg};
 use encoding::{Encoding, DecoderTrap};
 use encoding::all::EUC_JP;
-use byteorder::{LittleEndian, WriteBytesExt, ReadBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 
 extern crate yoin;
 
 use yoin::mast;
-use yoin::ir;
 use yoin::op;
-use yoin::dict;
 
 fn read_csv<P: AsRef<Path>>(buf: &mut Vec<String>, path: P) {
     let mut file = File::open(path).unwrap();
@@ -41,17 +38,6 @@ fn build_entries(entries: &[String]) -> (Vec<(&[u8], i32)>, Vec<u8>) {
         bytes.write_all(entry.as_bytes()).unwrap();
     }
     (inputs, bytes)
-}
-
-fn run() {
-    let bytecodes = include_bytes!("../../mecab.dic");
-    let entries = include_bytes!("../../mecab.entries");
-    let dict = dict::Dict::from_bytes(bytecodes, entries);
-    let input = env::args().nth(1).unwrap();
-    let morphs = dict.run(input.as_bytes()).unwrap();
-    for morph in &morphs {
-        println!("{}", morph);
-    }
 }
 
 fn main() {
