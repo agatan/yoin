@@ -271,6 +271,8 @@ impl Mast {
         }
     }
 
+    /// Print MAST as dot. (for debugging)
+    #[allow(unused)]
     pub fn print_dot(&self) {
         let initial = &self.initial;
         let states = &self.states;
@@ -308,6 +310,8 @@ impl Mast {
         println!("}}");
     }
 
+    /// Run MAST directly. (for debugging)
+    #[allow(unused)]
     pub fn run(&self, input: &[u8]) -> Result<Vec<i32>, String> {
         let mut state = self.initial.clone();
         let mut buf = [0; 4];
@@ -346,9 +350,5 @@ impl Mast {
                 .collect();
             Ok(results)
         }
-    }
-
-    pub fn initial_state_id(&self) -> StateId {
-        self.initial.borrow().id
     }
 }

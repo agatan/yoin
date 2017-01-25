@@ -4,7 +4,7 @@ use std::collections::{HashSet, HashMap};
 use std::ops;
 use std::iter::Iterator;
 
-use byteorder::{LittleEndian, BigEndian, WriteBytesExt, ReadBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 
 use mast::{State, Mast, StateId};
 
@@ -21,13 +21,13 @@ pub const OPCODE_BREAK: Op = Op(0b010_00000);
 pub const OPCODE_ACCEPT: Op = Op(0b011_00000);
 pub const OPCODE_ACCEPT_WITH: Op = Op(0b100_00000);
 
-const JUMP_SIZE_MASK: Op = Op(0b000_11_000);
+pub const JUMP_SIZE_MASK: Op = Op(0b000_11_000);
 
-const DATA_SIZE_MASK: Op = Op(0b000_00_111);
+pub const DATA_SIZE_MASK: Op = Op(0b000_00_111);
 
-const JUMP_SIZE_OFFSET: u8 = 3;
-const JUMP_SIZE_16: u8 = 0;
-const JUMP_SIZE_32: u8 = 1;
+pub const JUMP_SIZE_OFFSET: u8 = 3;
+pub const JUMP_SIZE_16: u8 = 0;
+pub const JUMP_SIZE_32: u8 = 1;
 
 impl ops::BitOr for Op {
     type Output = Self;
@@ -214,166 +214,6 @@ pub fn build(mast: Mast) -> Vec<u8> {
     compiler.iseq()
 }
 
-#[derive(Debug, Clone)]
-pub struct Machine<'a> {
-    pc: usize,
-    iseq: &'a [u8],
-    data: [u8; 4],
-    data_len: u8,
-    input: &'a [u8],
-    len: usize,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Accept {
-    pub len: usize,
-    pub value: i32,
-}
-
-impl<'a> Machine<'a> {
-    pub fn new(iseq: &'a [u8], input: &'a [u8]) -> Self {
-        Machine {
-            pc: 0,
-            iseq: iseq,
-            data: [0; 4],
-            data_len: 0,
-            input: input,
-            len: 0,
-        }
-    }
-
-    fn read_u16(&mut self) -> u16 {
-        let mut from = &self.iseq[self.pc..];
-        self.pc += 2; // skip 16 bits
-        from.read_u16::<LittleEndian>().unwrap()
-    }
-
-    fn read_u32(&mut self) -> u32 {
-        let mut from = &self.iseq[self.pc..];
-        self.pc += 4; // skip 32 bits
-        from.read_u32::<LittleEndian>().unwrap()
-    }
-
-    fn get_jump_offset(&mut self, jump_size: u8) -> Result<usize, String> {
-        let jump = if jump_size == JUMP_SIZE_16 {
-            self.read_u16() as usize
-        } else if jump_size == JUMP_SIZE_32 {
-            self.read_u32() as usize
-        } else {
-            return Err(format!("jump size is ill-formed: {}", jump_size));
-        };
-        Ok(jump)
-    }
-
-    fn run_jump(&mut self) -> Result<(), String> {
-        let op = Op(self.iseq[self.pc]);
-        self.pc += 1;
-        let cmp = self.iseq[self.pc];
-        self.pc += 1;
-
-        let jump = self.get_jump_offset(op.jump_bytes())?;
-        if cmp != self.input[self.len] {
-            return Ok(());
-        }
-        self.len += 1;
-        self.pc += jump;
-        Ok(())
-    }
-
-    fn run_outjump(&mut self) -> Result<(), String> {
-        let op = Op(self.iseq[self.pc]);
-        self.pc += 1;
-        let cmp = self.iseq[self.pc];
-        self.pc += 1;
-        let jump = self.get_jump_offset(op.jump_bytes())?;
-        if cmp != self.input[self.len] {
-            self.pc += op.data_bytes() as usize; // skip unused data bytes.
-            return Ok(());
-        }
-        self.len += 1;
-        for _ in 0..op.data_bytes() {
-            debug_assert!(self.data_len < 4, "output data is not 4 bytes");
-            self.data[self.data_len as usize] = self.iseq[self.pc];
-            self.data_len += 1;
-            self.pc += 1;
-        }
-        self.pc += jump - op.data_bytes() as usize;
-        Ok(())
-    }
-}
-
-impl<'a> Iterator for Machine<'a> {
-    type Item = Result<Accept, String>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            let op = Op(self.iseq[self.pc]);
-            match op.code() {
-                OPCODE_BREAK => return None,
-                OPCODE_JUMP => {
-                    if self.len >= self.input.len() {
-                        return None;
-                    }
-                    match self.run_jump() {
-                        Ok(()) => (),
-                        Err(err) => return Some(Err(err)),
-                    }
-                }
-                OPCODE_OUTJUMP => {
-                    if self.len >= self.input.len() {
-                        return None;
-                    }
-                    match self.run_outjump() {
-                        Ok(()) => (),
-                        Err(err) => return Some(Err(err)),
-                    }
-                }
-                OPCODE_ACCEPT => {
-                    self.pc += 1;
-                    debug_assert!(self.data_len == 4);
-                    let value = gen_data(&self.data);
-                    let accept = Accept {
-                        len: self.len,
-                        value: value,
-                    };
-                    return Some(Ok(accept));
-                }
-                OPCODE_ACCEPT_WITH => {
-                    let save = self.data_len;
-                    self.pc += 1; // skip OPCODE_ACCEPT_WITH
-                    for _ in 0..op.data_bytes() {
-                        debug_assert!(self.data_len < 4);
-                        self.data[self.data_len as usize] = self.iseq[self.pc];
-                        self.pc += 1;
-                        self.data_len += 1;
-                    }
-                    debug_assert!(self.data_len == 4);
-                    let value = gen_data(&self.data);
-                    let accept = Accept {
-                        len: self.len,
-                        value: value,
-                    };
-                    self.data_len = save;
-                    return Some(Ok(accept));
-                }
-                op => return Some(Err(format!("unknown op code: {:08b}", op.0))),
-            }
-        }
-    }
-}
-
-fn gen_data(data: &[u8; 4]) -> i32 {
-    let mut from: &[u8] = data;
-    from.read_i32::<LittleEndian>().unwrap()
-}
-
-pub fn run_iter<'a>(iseq: &'a [u8], input: &'a [u8]) -> Machine<'a> {
-    Machine::new(iseq, input)
-}
-
-pub fn run(iseq: &[u8], input: &[u8]) -> Result<Vec<Accept>, String> {
-    run_iter(iseq, input).collect()
-}
 
 #[test]
 fn test_build() {

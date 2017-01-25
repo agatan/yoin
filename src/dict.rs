@@ -1,24 +1,25 @@
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use morph::Morph;
-use op;
+use fst::Fst;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+use morph::Morph;
+
+#[derive(Debug, Clone)]
 pub struct Dict<'a> {
     entries: &'a [u8],
-    bytecodes: &'a [u8],
+    fst: Fst<&'a [u8]>,
 }
 
 impl<'a> Dict<'a> {
     pub fn from_bytes(bytecodes: &'a [u8], entries: &'a [u8]) -> Dict<'a> {
         Dict {
             entries: entries,
-            bytecodes: bytecodes,
+            fst: unsafe { Fst::from_bytes(bytecodes) },
         }
     }
 
     pub fn run(&self, input: &[u8]) -> Result<Vec<Morph<'a>>, String> {
-        op::run_iter(self.bytecodes, input)
+        self.fst.run_iter(input)
             .map(|result| result.map(|acc| self.fetch_entry(acc.value as usize)))
             .collect()
     }
