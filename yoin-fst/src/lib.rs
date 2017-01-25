@@ -28,6 +28,10 @@ impl<T: AsRef<[u8]>> Fst<T> {
     pub fn run<'a>(&'a self, input: &'a [u8]) -> Result<Vec<Accept>, String> {
         self.run_iter(input).collect()
     }
+
+    pub fn bytecode<'a>(&'a self) -> &'a [u8] {
+        self.bytecode.as_ref()
+    }
 }
 
 impl Fst<Vec<u8>> {
