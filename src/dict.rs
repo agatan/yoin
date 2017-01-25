@@ -1,5 +1,3 @@
-use byteorder::{LittleEndian, ReadBytesExt};
-
 use fst::Fst;
 
 use morph::Morph;
@@ -18,16 +16,14 @@ impl<'a> Dict<'a> {
         }
     }
 
-    pub fn run(&self, input: &[u8]) -> Result<Vec<Morph<'a>>, String> {
+    pub fn run(&self, input: &[u8]) -> Result<Vec<Morph<&'a str>>, String> {
         self.fst.run_iter(input)
             .map(|result| result.map(|acc| self.fetch_entry(acc.value as usize)))
             .collect()
     }
 
-    pub fn fetch_entry(&self, offset: usize) -> Morph<'a> {
-        let mut entry_bytes = &self.entries[offset..];
-        let size = entry_bytes.read_u32::<LittleEndian>().unwrap();
-        let entry = unsafe { ::std::str::from_utf8_unchecked(&entry_bytes[..size as usize]) };
-        Morph::new(entry)
+    pub fn fetch_entry(&self, offset: usize) -> Morph<&'a str> {
+        let entry_bytes = &self.entries[offset..];
+        unsafe { Morph::decode(entry_bytes) }
     }
 }

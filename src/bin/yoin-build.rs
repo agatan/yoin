@@ -9,11 +9,12 @@ use std::io::prelude::*;
 use clap::{App, Arg};
 use encoding::{Encoding, DecoderTrap};
 use encoding::all::EUC_JP;
-use byteorder::{LittleEndian, WriteBytesExt};
 
 extern crate yoin_fst as fst;
+extern crate yoin;
 
 use fst::Fst;
+use yoin::morph::Morph;
 
 fn read_csv<P: AsRef<Path>>(buf: &mut Vec<String>, path: P) {
     let mut file = File::open(path).unwrap();
@@ -25,16 +26,30 @@ fn read_csv<P: AsRef<Path>>(buf: &mut Vec<String>, path: P) {
     }
 }
 
+fn build_entry(s: &str) -> Morph<&str> {
+    let mut tokens = s.splitn(5, ',');
+    let surface = tokens.next().unwrap();
+    let left_id = tokens.next().unwrap().parse::<i16>().unwrap();
+    let right_id = tokens.next().unwrap().parse::<i16>().unwrap();
+    let weight = tokens.next().unwrap().parse::<i16>().unwrap();
+    let contents = tokens.next().unwrap();
+    Morph {
+        surface: surface,
+        left_id: left_id,
+        right_id: right_id,
+        weight: weight,
+        contents: contents,
+    }
+}
+
 fn build_entries(entries: &[String]) -> (Vec<(&[u8], i32)>, Vec<u8>) {
     let mut inputs = Vec::new();
     let mut bytes = Vec::new();
     for entry in entries {
         let index = bytes.len();
-        let token = entry.as_str().split(',').next().unwrap();
-        inputs.push((token.as_bytes(), index as i32));
-        let size = entry.len() as u32;
-        bytes.write_u32::<LittleEndian>(size).unwrap();
-        bytes.write_all(entry.as_bytes()).unwrap();
+        let morph = build_entry(&entry);
+        inputs.push((morph.surface.as_bytes(), index as i32));
+        morph.encode(&mut bytes).unwrap();
     }
     (inputs, bytes)
 }
