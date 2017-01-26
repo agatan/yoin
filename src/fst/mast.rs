@@ -352,3 +352,15 @@ impl Mast {
         }
     }
 }
+
+#[test]
+fn test_build() {
+    use fst::op::build;
+    let samples: Vec<(&[u8], i32)> = vec![(b"a", !0)];
+    let expected: Vec<u8> = vec![0b00000100, 0b01100001, 0b00000101, 0b00000000, 0b11111111,
+                                 0b11111111, 0b11111111, 0b11111111, 0b01000000, 0b01100000,
+                                 0b01000000];
+    let m = Mast::build(samples);
+    let bytes = build(m);
+    assert_eq!(bytes, expected);
+}
