@@ -4,9 +4,9 @@ extern crate byteorder;
 use std::env;
 
 extern crate yoin;
-extern crate yoin_ipadic as ipadic;
 
 use yoin::dict;
+use yoin::ipadic;
 
 fn main() {
     let bytecodes = ipadic::BYTECODE;

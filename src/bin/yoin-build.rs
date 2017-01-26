@@ -10,10 +10,9 @@ use clap::{App, Arg};
 use encoding::{Encoding, DecoderTrap};
 use encoding::all::EUC_JP;
 
-extern crate yoin_fst as fst;
 extern crate yoin;
 
-use fst::Fst;
+use yoin::fst::Fst;
 use yoin::morph::Morph;
 
 fn read_csv<P: AsRef<Path>>(buf: &mut Vec<String>, path: P) {
