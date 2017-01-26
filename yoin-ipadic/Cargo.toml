@@ -1,9 +1,0 @@
-[package]
-name = "yoin-ipadic"
-version = "0.1.0"
-authors = ["agatan <agatan039@gmail.com>"]
-
-[dependencies]
-
-[features]
-build-ipadic = []
