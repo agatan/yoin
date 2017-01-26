@@ -62,3 +62,18 @@ impl<S: AsRef<str>> fmt::Display for Morph<S> {
                self.contents.as_ref())
     }
 }
+
+#[test]
+fn test_morph_encode_decode() {
+    let m = Morph {
+        surface: "見出し語",
+        left_id: 1,
+        right_id: 2,
+        weight: 3,
+        contents: "contents",
+    };
+    let mut buf = Vec::new();
+    m.encode(&mut buf).unwrap();
+    let m2 = unsafe { Morph::decode(&buf) };
+    assert_eq!(m2, m);
+}

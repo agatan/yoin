@@ -193,3 +193,45 @@ fn gen_data(data: &[u8; 4]) -> i32 {
     let mut from: &[u8] = data;
     from.read_i32::<LittleEndian>().unwrap()
 }
+
+#[test]
+fn test_run() {
+    use std::collections::HashSet;
+
+    let samples: Vec<(&[u8], i32)> = vec![(b"ab", 0xFF), (b"abc", 0), (b"abc", !0), (b"abd", 1)];
+    let iseq = Fst::build(samples);
+    let accs: HashSet<_> = iseq.run(b"abc").unwrap().into_iter().collect();
+    let expects: HashSet<_> = vec![Accept {
+                                       len: 2,
+                                       value: 0xFF,
+                                   },
+                                   Accept { len: 3, value: 0 },
+                                   Accept {
+                                       len: 3,
+                                       value: !0,
+                                   }]
+        .into_iter()
+        .collect();
+    assert_eq!(accs, expects);
+}
+
+#[test]
+fn test_op() {
+    use std::collections::HashSet;
+    let samples: Vec<(&[u8], i32)> = vec![(b"apr", 0),
+                                          (b"aug", 1),
+                                          (b"dec", 2),
+                                          (b"feb", 3),
+                                          (b"feb", 4),
+                                          (b"feb'", 8),
+                                          (b"jan", 5),
+                                          (b"jul", 6),
+                                          (b"jun", 7)];
+    let iseq = Fst::build(samples);
+    let expected =
+        vec![Accept { len: 3, value: 3 }, Accept { len: 3, value: 4 }, Accept { len: 4, value: 8 }]
+            .into_iter()
+            .collect();
+    assert_eq!(iseq.run_iter(b"feb'").collect::<Result<HashSet<_>, _>>().unwrap(),
+               expected);
+}
