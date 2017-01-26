@@ -1,7 +1,0 @@
-[package]
-name = "yoin-fst"
-version = "0.1.0"
-authors = ["agatan <agatan039@gmail.com>"]
-
-[dependencies]
-byteorder = "1.0.0"

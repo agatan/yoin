@@ -1,5 +1,3 @@
-extern crate byteorder;
-
 use std::convert::AsRef;
 use std::iter::IntoIterator;
 use byteorder::{LittleEndian, ReadBytesExt};

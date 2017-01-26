@@ -6,7 +6,7 @@ use std::iter::Iterator;
 
 use byteorder::{BigEndian, WriteBytesExt};
 
-use mast::{State, Mast, StateId};
+use super::mast::{State, Mast, StateId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Op(pub u8);
