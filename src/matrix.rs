@@ -1,5 +1,6 @@
 use std::convert::AsRef;
 use std::io::{self, Write};
+use std::ops::{Index, IndexMut};
 
 use byteorder::{NativeEndian, WriteBytesExt, ByteOrder};
 
@@ -8,6 +9,16 @@ pub struct Matrix<T: AsRef<[i16]>> {
     width: u32,
     height: u32,
     table: T,
+}
+
+impl Matrix<Vec<i16>> {
+    pub fn with_zeros(width: u32, height: u32) -> Self {
+        Matrix {
+            width: width,
+            height: height,
+            table: vec![0; (width*height) as usize],
+        }
+    }
 }
 
 impl<T: AsRef<[i16]>> Matrix<T> {
@@ -37,6 +48,21 @@ impl<'a> Matrix<&'a [i16]> {
             height: height,
             table: table,
         }
+    }
+}
+
+impl<T: AsRef<[i16]>> Index<(u32, u32)> for Matrix<T> {
+    type Output = i16;
+    fn index(&self, index: (u32, u32)) -> &i16 {
+        let (w, h) = index;
+        &self.table.as_ref()[(w + h * self.width) as usize]
+    }
+}
+
+impl IndexMut<(u32, u32)> for Matrix<Vec<i16>> {
+    fn index_mut(&mut self, index: (u32, u32)) -> &mut i16 {
+        let (w, h) = index;
+        &mut self.table[(w + h * self.width) as usize]
     }
 }
 
