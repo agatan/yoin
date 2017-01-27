@@ -20,6 +20,25 @@ impl<'a> Dict<&'a [u8]> {
     }
 }
 
+impl Dict<Vec<u8>> {
+    pub fn build<S: AsRef<str>>(morphs: &[Morph<S>]) -> Self {
+        let mut morph_bytes = Vec::new();
+        let mut fst_inputs = Vec::new();
+        for morph in morphs {
+            let offset = morph_bytes.len();
+            let surface = morph.surface.as_ref().as_bytes();
+            fst_inputs.push((surface, offset as i32));
+            morph.encode_native(&mut morph_bytes).unwrap();
+        }
+        fst_inputs.sort();
+        let fst = Fst::build(fst_inputs);
+        Dict {
+            morph_bytes: morph_bytes,
+            fst: fst,
+        }
+    }
+}
+
 impl<T: AsRef<[u8]>> Dict<T> {
     pub fn lookup_iter<'a>(&'a self, input: &'a [u8]) -> Iter<'a> {
         Iter {
