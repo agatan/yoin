@@ -5,3 +5,4 @@ pub mod fst;
 pub mod ipadic;
 pub mod morph;
 pub mod dict;
+pub mod matrix;
