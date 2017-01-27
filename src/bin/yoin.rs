@@ -5,15 +5,15 @@ use std::env;
 
 extern crate yoin;
 
-use yoin::dict;
+use yoin::dict::{Dict, DecodedDict};
 use yoin::ipadic;
 
 fn main() {
     let bytecodes = ipadic::BYTECODE;
     let entries = ipadic::ENTRIES;
-    let dict = unsafe { dict::Dict::from_bytes(bytecodes, entries) };
+    let dict = unsafe { DecodedDict::from_bytes(bytecodes, entries) };
     let input = env::args().nth(1).unwrap();
-    let morphs = dict.run(input.as_bytes()).unwrap();
+    let morphs = dict.lookup(input.as_bytes()).unwrap();
     for morph in &morphs {
         println!("{}", morph);
     }
