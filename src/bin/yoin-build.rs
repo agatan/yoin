@@ -48,7 +48,7 @@ fn build_entries(entries: &[String]) -> (Vec<(&[u8], i32)>, Vec<u8>) {
         let index = bytes.len();
         let morph = build_entry(&entry);
         inputs.push((morph.surface.as_bytes(), index as i32));
-        morph.encode(&mut bytes).unwrap();
+        morph.encode_native(&mut bytes).unwrap();
     }
     (inputs, bytes)
 }
