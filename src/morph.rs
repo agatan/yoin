@@ -2,7 +2,7 @@ use std::fmt;
 use std::io::{self, Write};
 use std::convert::AsRef;
 
-use byteorder::{ReadBytesExt, LittleEndian, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Morph<S>
@@ -32,13 +32,21 @@ impl<S: AsRef<str>> Morph<S> {
 
 impl<'a> Morph<&'a str> {
     pub unsafe fn decode(mut bs: &'a [u8]) -> Self {
-        let surface_len = bs.read_u32::<LittleEndian>().unwrap();
+        let ptr = bs.as_ptr() as *const u32;
+        let surface_len = *ptr;
+        bs = &bs[::std::mem::size_of::<u32>()..];
         let surface = ::std::str::from_utf8_unchecked(&bs[..surface_len as usize]);
         bs = &bs[surface_len as usize..];
-        let left_id = bs.read_i16::<LittleEndian>().unwrap();
-        let right_id = bs.read_i16::<LittleEndian>().unwrap();
-        let weight = bs.read_i16::<LittleEndian>().unwrap();
-        let contents_len = bs.read_u32::<LittleEndian>().unwrap();
+
+        let ptr = bs.as_ptr() as *const i16;
+        let left_id = *ptr;
+        let right_id = *ptr.offset(1);
+        let weight = *ptr.offset(2);
+        bs = &bs[::std::mem::size_of::<i16>()*3..];
+
+        let ptr = bs.as_ptr() as *const u32;
+        let contents_len = *ptr;
+        bs = &bs[::std::mem::size_of::<u32>()..];
         let contents = ::std::str::from_utf8_unchecked(&bs[..contents_len as usize]);
 
         Morph {
