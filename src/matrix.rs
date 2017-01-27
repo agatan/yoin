@@ -41,7 +41,7 @@ impl<'a> Matrix<&'a [i16]> {
 }
 
 #[test]
-fn test_matrix_encode_decode() {
+fn test_encode_decode() {
     let table: &[i16] = &[-3, -2, -1, 0, 1, 2];
     let matrix = Matrix {
         width: 2,
