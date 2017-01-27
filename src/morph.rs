@@ -76,7 +76,7 @@ impl<S: AsRef<str>> fmt::Display for Morph<S> {
 }
 
 #[test]
-fn test_morph_encode_decode() {
+fn test_encode_decode() {
     let m = Morph {
         surface: "見出し語",
         left_id: 1,
