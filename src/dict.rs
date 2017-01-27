@@ -5,47 +5,34 @@ use fst::{Fst, FstIter};
 
 use morph::Morph;
 
-pub trait Dict<'a> {
-    type Str: AsRef<str>;
-    type Iterator: Iterator<Item=Result<Morph<Self::Str>, String>>;
-
-    fn lookup_iter(&'a self, input: &'a [u8]) -> Self::Iterator;
-    fn lookup(&'a self, input: &'a [u8]) -> Result<Vec<Morph<Self::Str>>, String> {
-        self.lookup_iter(input).collect()
-    }
-    fn lookup_str(&'a self, input: &'a str) -> Self::Iterator {
-        self.lookup_iter(input.as_bytes())
-    }
-}
-
 #[derive(Debug, Clone)]
-pub struct DecodedDict<'a> {
-    entries: &'a [u8],
-    fst: Fst<&'a [u8]>,
+pub struct Dict<T: AsRef<[u8]>> {
+    morph_bytes: T,
+    fst: Fst<T>,
 }
 
-impl<'a> DecodedDict<'a> {
-    pub unsafe fn from_bytes(bytecodes: &'a [u8], entries: &'a [u8]) -> Self {
-        DecodedDict {
-            entries: entries,
+impl<'a> Dict<&'a [u8]> {
+    pub unsafe fn from_bytes(bytecodes: &'a [u8], morph_bytes: &'a [u8]) -> Self {
+        Dict {
+            morph_bytes: morph_bytes,
             fst: Fst::from_bytes(bytecodes),
         }
     }
 }
 
-pub struct DecodedMorphIter<'a> {
-    entries: &'a [u8],
+pub struct Iter<'a> {
+    morph_bytes: &'a [u8],
     iter: FstIter<'a>,
 }
 
-impl<'a> DecodedMorphIter<'a> {
+impl<'a> Iter<'a> {
     fn fetch_entry(&self, offset: usize) -> Morph<&'a str> {
-        let entry_bytes = &self.entries[offset..];
+        let entry_bytes = &self.morph_bytes[offset..];
         unsafe { Morph::decode(entry_bytes) }
     }
 }
 
-impl<'a> Iterator for DecodedMorphIter<'a> {
+impl<'a> Iterator for Iter<'a> {
     type Item = Result<Morph<&'a str>, String>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -57,15 +44,19 @@ impl<'a> Iterator for DecodedMorphIter<'a> {
     }
 }
 
-impl<'a> Dict<'a> for DecodedDict<'a> {
-    type Str = &'a str;
-    type Iterator = DecodedMorphIter<'a>;
-
-    fn lookup_iter(&'a self, input: &'a [u8]) -> Self::Iterator {
-        DecodedMorphIter{
-            entries: self.entries,
+impl<T: AsRef<[u8]>> Dict<T> {
+    pub fn lookup_iter<'a>(&'a self, input: &'a [u8]) -> Iter<'a> {
+        Iter {
+            morph_bytes: self.morph_bytes.as_ref(),
             iter: self.fst.run_iter(input),
         }
     }
-}
 
+    pub fn lookup<'a>(&'a self, input: &'a [u8]) -> Result<Vec<Morph<&'a str>>, String> {
+        self.lookup_iter(input).collect()
+    }
+
+    pub fn lookup_str<'a>(&'a self, input: &'a str) -> Iter<'a> {
+        self.lookup_iter(input.as_bytes())
+    }
+}
