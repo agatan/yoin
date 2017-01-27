@@ -51,8 +51,12 @@ impl<T: AsRef<[u8]>> Dict<T> {
         self.lookup_iter(input).collect()
     }
 
-    pub fn lookup_str<'a>(&'a self, input: &'a str) -> Iter<'a> {
+    pub fn lookup_str_iter<'a>(&'a self, input: &'a str) -> Iter<'a> {
         self.lookup_iter(input.as_bytes())
+    }
+
+    pub fn lookup_str<'a>(&'a self, input: &'a str) -> Result<Vec<Morph<&'a str>>, String> {
+        self.lookup(input.as_bytes())
     }
 }
 
@@ -76,6 +80,53 @@ impl<'a> Iterator for Iter<'a> {
             Some(r.map(|o| self.fetch_entry(o.value as usize)))
         } else {
             None
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use morph::Morph;
+
+    #[test]
+    fn test_build_lookup() {
+        let morphs = vec![Morph {
+                              surface: "す",
+                              left_id: 1,
+                              right_id: 1,
+                              weight: 1,
+                              contents: "contents 1",
+                          },
+                          Morph {
+                              surface: "す",
+                              left_id: 2,
+                              right_id: 2,
+                              weight: 2,
+                              contents: "contents 2",
+                          },
+                          Morph {
+                              surface: "すも",
+                              left_id: 3,
+                              right_id: 3,
+                              weight: 3,
+                              contents: "contents 3",
+                          },
+                          Morph {
+                              surface: "すもも",
+                              left_id: 4,
+                              right_id: 4,
+                              weight: 4,
+                              contents: "contents 4",
+                          }];
+        let dict = Dict::build(&morphs);
+        let results = dict.lookup_str("すもも").unwrap();
+        assert_eq!(results.len(), morphs.len());
+        // the order of lookup results is not fixed.
+        for result in results {
+            assert!(morphs.iter().any(|m| *m == result),
+                    "invalid result: {:?}",
+                    result);
         }
     }
 }
