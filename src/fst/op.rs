@@ -213,4 +213,3 @@ pub fn build(mast: Mast) -> Vec<u8> {
     compiler.compile(mast);
     compiler.iseq()
 }
-

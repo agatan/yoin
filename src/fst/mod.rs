@@ -6,15 +6,15 @@ mod mast;
 mod op;
 
 #[derive(Debug, Clone)]
-pub struct Fst<T> where T: AsRef<[u8]> {
+pub struct Fst<T>
+    where T: AsRef<[u8]>
+{
     bytecode: T,
 }
 
 impl<'a> Fst<&'a [u8]> {
     pub unsafe fn from_bytes(bytes: &'a [u8]) -> Self {
-        Fst {
-            bytecode: bytes,
-        }
+        Fst { bytecode: bytes }
     }
 }
 
@@ -33,11 +33,9 @@ impl<T: AsRef<[u8]>> Fst<T> {
 }
 
 impl Fst<Vec<u8>> {
-    pub fn build<'a, I: IntoIterator<Item=(&'a [u8], i32)>>(inputs: I) -> Self {
+    pub fn build<'a, I: IntoIterator<Item = (&'a [u8], i32)>>(inputs: I) -> Self {
         let m = mast::Mast::build(inputs);
-        Fst {
-            bytecode: op::build(m),
-        }
+        Fst { bytecode: op::build(m) }
     }
 }
 
