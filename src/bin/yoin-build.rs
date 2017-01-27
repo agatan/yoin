@@ -117,10 +117,10 @@ fn build() -> Result<(), Error>{
     println!("building MAST and bytecode");
     let f = Fst::build(inputs);
     println!("dumping...");
-    let dic_path = outdir.join("mecab.dic");
+    let dic_path = outdir.join("ipadic.dic.dat");
     let mut out = File::create(dic_path)?;
     out.write_all(f.bytecode())?;
-    let entries_path = outdir.join("mecab.entries");
+    let entries_path = outdir.join("ipadic.morphs.dat");
     let mut out = File::create(entries_path)?;
     out.write_all(&entries)?;
     Ok(())
