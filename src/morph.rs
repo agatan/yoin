@@ -2,7 +2,7 @@ use std::fmt;
 use std::io::{self, Write};
 use std::convert::AsRef;
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::{ByteOrder, NativeEndian, WriteBytesExt};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Morph<S>
@@ -16,17 +16,21 @@ pub struct Morph<S>
 }
 
 impl<S: AsRef<str>> Morph<S> {
-    pub fn encode<W: Write>(&self, mut w: W) -> io::Result<()> {
+    pub fn encode<W: Write, O: ByteOrder>(&self, mut w: W) -> io::Result<()> {
         let surface_bytes = self.surface.as_ref().as_bytes();
-        w.write_u32::<LittleEndian>(surface_bytes.len() as u32)?;
+        w.write_u32::<O>(surface_bytes.len() as u32)?;
         w.write_all(surface_bytes)?;
-        w.write_i16::<LittleEndian>(self.left_id)?;
-        w.write_i16::<LittleEndian>(self.right_id)?;
-        w.write_i16::<LittleEndian>(self.weight)?;
+        w.write_i16::<O>(self.left_id)?;
+        w.write_i16::<O>(self.right_id)?;
+        w.write_i16::<O>(self.weight)?;
         let contents_bytes = self.contents.as_ref().as_bytes();
-        w.write_u32::<LittleEndian>(contents_bytes.len() as u32)?;
+        w.write_u32::<O>(contents_bytes.len() as u32)?;
         w.write_all(contents_bytes)?;
         Ok(())
+    }
+
+    pub fn encode_native<W: Write>(&self, w: W) -> io::Result<()> {
+        self.encode::<W, NativeEndian>(w)
     }
 }
 
@@ -81,7 +85,7 @@ fn test_morph_encode_decode() {
         contents: "contents",
     };
     let mut buf = Vec::new();
-    m.encode(&mut buf).unwrap();
+    m.encode_native(&mut buf).unwrap();
     let m2 = unsafe { Morph::decode(&buf) };
     assert_eq!(m2, m);
 }
