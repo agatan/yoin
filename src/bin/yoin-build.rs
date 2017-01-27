@@ -56,8 +56,14 @@ fn build_entries(entries: &[String]) -> (Vec<(&[u8], i32)>, Vec<u8>) {
 fn main() {
     let matches = App::new("yoin-build")
         .version("0.0.1")
-        .arg(Arg::with_name("dict").value_name("DIR").help("directory that contains dictionaries").takes_value(true))
-        .arg(Arg::with_name("outdir").value_name("OUTDIR").help("output directory").takes_value(true))
+        .arg(Arg::with_name("dict")
+            .value_name("DIR")
+            .help("directory that contains dictionaries")
+            .takes_value(true))
+        .arg(Arg::with_name("outdir")
+            .value_name("OUTDIR")
+            .help("output directory")
+            .takes_value(true))
         .get_matches();
     let dict = match matches.value_of("dict") {
         Some(dict) => dict,

@@ -20,6 +20,23 @@ impl<'a> Dict<&'a [u8]> {
     }
 }
 
+impl<T: AsRef<[u8]>> Dict<T> {
+    pub fn lookup_iter<'a>(&'a self, input: &'a [u8]) -> Iter<'a> {
+        Iter {
+            morph_bytes: self.morph_bytes.as_ref(),
+            iter: self.fst.run_iter(input),
+        }
+    }
+
+    pub fn lookup<'a>(&'a self, input: &'a [u8]) -> Result<Vec<Morph<&'a str>>, String> {
+        self.lookup_iter(input).collect()
+    }
+
+    pub fn lookup_str<'a>(&'a self, input: &'a str) -> Iter<'a> {
+        self.lookup_iter(input.as_bytes())
+    }
+}
+
 pub struct Iter<'a> {
     morph_bytes: &'a [u8],
     iter: FstIter<'a>,
@@ -41,22 +58,5 @@ impl<'a> Iterator for Iter<'a> {
         } else {
             None
         }
-    }
-}
-
-impl<T: AsRef<[u8]>> Dict<T> {
-    pub fn lookup_iter<'a>(&'a self, input: &'a [u8]) -> Iter<'a> {
-        Iter {
-            morph_bytes: self.morph_bytes.as_ref(),
-            iter: self.fst.run_iter(input),
-        }
-    }
-
-    pub fn lookup<'a>(&'a self, input: &'a [u8]) -> Result<Vec<Morph<&'a str>>, String> {
-        self.lookup_iter(input).collect()
-    }
-
-    pub fn lookup_str<'a>(&'a self, input: &'a str) -> Iter<'a> {
-        self.lookup_iter(input.as_bytes())
     }
 }

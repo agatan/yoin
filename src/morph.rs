@@ -46,7 +46,7 @@ impl<'a> Morph<&'a str> {
         let left_id = *ptr;
         let right_id = *ptr.offset(1);
         let weight = *ptr.offset(2);
-        bs = &bs[::std::mem::size_of::<i16>()*3..];
+        bs = &bs[::std::mem::size_of::<i16>() * 3..];
 
         let ptr = bs.as_ptr() as *const u32;
         let contents_len = *ptr;
