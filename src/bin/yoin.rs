@@ -10,8 +10,8 @@ use yoin::ipadic;
 
 fn main() {
     let bytecodes = ipadic::BYTECODE;
-    let entries = ipadic::ENTRIES;
-    let dict = unsafe { Dict::from_bytes(bytecodes, entries) };
+    let morphs = ipadic::MORPHS;
+    let dict = unsafe { Dict::from_bytes(bytecodes, morphs) };
     let input = env::args().nth(1).unwrap();
     let morphs = dict.lookup(input.as_bytes()).unwrap();
     for morph in &morphs {
