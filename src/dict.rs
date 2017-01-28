@@ -19,7 +19,7 @@ pub trait Dict<'a> {
         self.lookup_str_iter(input).collect()
     }
 
-    fn connection_cost(&self, left_id: u16, right_id: u16) -> i16;
+    fn connection_cost(&self, right_id: u16, left_id: u16) -> i16;
 }
 
 #[derive(Debug, Clone)]
