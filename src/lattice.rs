@@ -48,7 +48,7 @@ impl<'a> Node<'a> {
         }
     }
 
-    pub fn surface_len(&self) -> usize {
+    fn surface_len(&self) -> usize {
         match self.kind {
             NodeKind::BosEos => 1,
             NodeKind::Known(ref m) => m.surface.chars().count(),
@@ -57,7 +57,7 @@ impl<'a> Node<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct NodeArena<'a>(Vec<Node<'a>>);
+struct NodeArena<'a>(Vec<Node<'a>>);
 
 impl<'a> NodeArena<'a> {
     fn new() -> Self {
