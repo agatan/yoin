@@ -14,7 +14,7 @@ fn bench_lookup(b: &mut Bencher) {
     let dict = ipadic::dictionary();
     b.iter(|| {
         for word in &words {
-            dict.lookup_str(word).unwrap();
+            dict.lookup_str_iter(word).count();
         }
     });
 }

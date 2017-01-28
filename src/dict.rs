@@ -6,15 +6,15 @@ use fst::{Fst, FstIter};
 use morph::Morph;
 
 pub trait Dict<'a> {
-    type Iterator: Iterator<Item=Result<Morph<&'a str>, String>>;
+    type Iterator: Iterator<Item=Morph<&'a str>>;
     fn lookup_iter(&'a self, input: &'a [u8]) -> Self::Iterator;
-    fn lookup(&'a self, input: &'a [u8]) -> Result<Vec<Morph<&'a str>>, String> {
+    fn lookup(&'a self, input: &'a [u8]) -> Vec<Morph<&'a str>> {
         self.lookup_iter(input).collect()
     }
     fn lookup_str_iter(&'a self, input: &'a str) -> Self::Iterator {
         self.lookup_iter(input.as_bytes())
     }
-    fn lookup_str(&'a self, input: &'a str) -> Result<Vec<Morph<&'a str>>, String> {
+    fn lookup_str(&'a self, input: &'a str) -> Vec<Morph<&'a str>> {
         self.lookup_str_iter(input).collect()
     }
 }
@@ -77,14 +77,10 @@ impl<'a> Iter<'a> {
 }
 
 impl<'a> Iterator for Iter<'a> {
-    type Item = Result<Morph<&'a str>, String>;
+    type Item = Morph<&'a str>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(r) = self.iter.next() {
-            Some(r.map(|o| self.fetch_entry(o.value as usize)))
-        } else {
-            None
-        }
+        self.iter.next().map(|acc| self.fetch_entry(acc.value as usize))
     }
 }
 
@@ -124,7 +120,7 @@ mod tests {
                               contents: "contents 4",
                           }];
         let dict = FstDict::build(&morphs);
-        let results = dict.lookup_str("すもも").unwrap();
+        let results = dict.lookup_str("すもも");
         assert_eq!(results.len(), morphs.len());
         // the order of lookup results is not fixed.
         for result in results {

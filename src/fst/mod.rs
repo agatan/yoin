@@ -23,7 +23,7 @@ impl<T: AsRef<[u8]>> Fst<T> {
         FstIter::new(self.bytecode.as_ref(), input)
     }
 
-    pub fn run<'a>(&'a self, input: &'a [u8]) -> Result<Vec<Accept>, String> {
+    pub fn run<'a>(&'a self, input: &'a [u8]) -> Vec<Accept> {
         self.run_iter(input).collect()
     }
 
@@ -79,41 +79,38 @@ impl<'a> FstIter<'a> {
         from.read_u32::<LittleEndian>().unwrap()
     }
 
-    fn get_jump_offset(&mut self, jump_size: u8) -> Result<usize, String> {
-        let jump = if jump_size == op::JUMP_SIZE_16 {
+    fn get_jump_offset(&mut self, jump_size: u8) -> usize {
+        if jump_size == op::JUMP_SIZE_16 {
             self.read_u16() as usize
-        } else if jump_size == op::JUMP_SIZE_32 {
-            self.read_u32() as usize
         } else {
-            return Err(format!("jump size is ill-formed: {}", jump_size));
-        };
-        Ok(jump)
+            debug_assert!(jump_size == op::JUMP_SIZE_32, "invalid bytecode");
+            self.read_u32() as usize
+        }
     }
 
-    fn run_jump(&mut self) -> Result<(), String> {
+    fn run_jump(&mut self) {
         let op = op::Op(self.iseq[self.pc]);
         self.pc += 1;
         let cmp = self.iseq[self.pc];
         self.pc += 1;
 
-        let jump = self.get_jump_offset(op.jump_bytes())?;
+        let jump = self.get_jump_offset(op.jump_bytes());
         if cmp != self.input[self.len] {
-            return Ok(());
+            return;
         }
         self.len += 1;
         self.pc += jump;
-        Ok(())
     }
 
-    fn run_outjump(&mut self) -> Result<(), String> {
+    fn run_outjump(&mut self) {
         let op = op::Op(self.iseq[self.pc]);
         self.pc += 1;
         let cmp = self.iseq[self.pc];
         self.pc += 1;
-        let jump = self.get_jump_offset(op.jump_bytes())?;
+        let jump = self.get_jump_offset(op.jump_bytes());
         if cmp != self.input[self.len] {
             self.pc += op.data_bytes() as usize; // skip unused data bytes.
-            return Ok(());
+            return;
         }
         self.len += 1;
         for _ in 0..op.data_bytes() {
@@ -123,12 +120,11 @@ impl<'a> FstIter<'a> {
             self.pc += 1;
         }
         self.pc += jump - op.data_bytes() as usize;
-        Ok(())
     }
 }
 
 impl<'a> Iterator for FstIter<'a> {
-    type Item = Result<Accept, String>;
+    type Item = Accept;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -139,19 +135,13 @@ impl<'a> Iterator for FstIter<'a> {
                     if self.len >= self.input.len() {
                         return None;
                     }
-                    match self.run_jump() {
-                        Ok(()) => (),
-                        Err(err) => return Some(Err(err)),
-                    }
+                    self.run_jump();
                 }
                 op::OPCODE_OUTJUMP => {
                     if self.len >= self.input.len() {
                         return None;
                     }
-                    match self.run_outjump() {
-                        Ok(()) => (),
-                        Err(err) => return Some(Err(err)),
-                    }
+                    self.run_outjump();
                 }
                 op::OPCODE_ACCEPT => {
                     self.pc += 1;
@@ -161,7 +151,7 @@ impl<'a> Iterator for FstIter<'a> {
                         len: self.len,
                         value: value,
                     };
-                    return Some(Ok(accept));
+                    return Some(accept);
                 }
                 op::OPCODE_ACCEPT_WITH => {
                     let save = self.data_len;
@@ -179,9 +169,9 @@ impl<'a> Iterator for FstIter<'a> {
                         value: value,
                     };
                     self.data_len = save;
-                    return Some(Ok(accept));
+                    return Some(accept);
                 }
-                op => return Some(Err(format!("unknown op code: {:08b}", op.0))),
+                op => unreachable!("unknown operator in bytecode: {:?}", op),
             }
         }
     }
@@ -198,7 +188,7 @@ fn test_run() {
 
     let samples: Vec<(&[u8], u32)> = vec![(b"ab", 0xFF), (b"abc", 0), (b"abc", !0), (b"abd", 1)];
     let iseq = Fst::build(samples);
-    let accs: HashSet<_> = iseq.run(b"abc").unwrap().into_iter().collect();
+    let accs: HashSet<_> = iseq.run(b"abc").into_iter().collect();
     let expects: HashSet<_> = vec![Accept {
                                        len: 2,
                                        value: 0xFF,
@@ -230,6 +220,6 @@ fn test_op() {
         vec![Accept { len: 3, value: 3 }, Accept { len: 3, value: 4 }, Accept { len: 4, value: 8 }]
             .into_iter()
             .collect();
-    assert_eq!(iseq.run_iter(b"feb'").collect::<Result<HashSet<_>, _>>().unwrap(),
+    assert_eq!(iseq.run_iter(b"feb'").collect::<HashSet<_>>(),
                expected);
 }
