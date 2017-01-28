@@ -25,25 +25,11 @@ impl<'a> Node<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Lattice<'a, D: Dict<'a>> {
-    input: &'a str,
-    dic: D,
-    node_list: HashMap<usize, Vec<Node<'a>>>,
-}
+pub struct NodeFolder<'a>(HashMap<usize, Vec<Node<'a>>>);
 
-impl<'a, D: Dict<'a>> Lattice<'a, D> {
-    pub fn new(input: &'a str, dic: D) -> Self {
-        let char_count = input.chars().count();
-        let node_list = HashMap::new();
-        let mut la = Lattice {
-            input: input,
-            dic: dic,
-            node_list: node_list,
-        };
-        la.add_node(0, NodeKind::Dummy);
-        la.add_node(char_count+1, NodeKind::Dummy);
-        // TODO(agatan): build the lattice for the input and the dic
-        la
+impl<'a> NodeFolder<'a> {
+    fn new() -> Self {
+        NodeFolder(HashMap::new())
     }
 
     fn add_node(&mut self, p: usize, kind: NodeKind<'a>) {
@@ -51,6 +37,30 @@ impl<'a, D: Dict<'a>> Lattice<'a, D> {
             kind: kind,
             cost: 0,
         };
-        self.node_list.entry(p).or_insert(Vec::new()).push(node);
+        self.0.entry(p).or_insert(Vec::new()).push(node);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Lattice<'a>{
+    nodes: NodeFolder<'a>,
+}
+
+impl<'a>Lattice<'a> {
+    pub fn new<D: Dict<'a>>(input: &'a str, dic: &'a D) -> Self {
+        let mut nodes = NodeFolder::new();
+        nodes.add_node(0, NodeKind::Dummy);
+        let char_count = input.chars().count();
+        nodes.add_node(char_count + 1, NodeKind::Dummy);
+        // TODO(agatan): build the lattice for the input and the dic
+        for (pos, _) in input.char_indices() {
+            let token = &input[pos..];
+            for morph in dic.lookup_str_iter(token) {
+                nodes.add_node(pos, NodeKind::Known(morph));
+            }
+        }
+        Lattice {
+            nodes: nodes,
+        }
     }
 }
