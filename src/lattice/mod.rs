@@ -48,6 +48,13 @@ impl<'a> Node<'a> {
             NodeKind::Known(ref m) => m.surface,
         }
     }
+
+    pub fn surface_len(&self) -> usize {
+        match self.kind {
+            NodeKind::BosEos => 1,
+            NodeKind::Known(ref m) => m.surface.chars().count(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -65,7 +72,7 @@ impl<'a> NodeArena<'a> {
         id
     }
 
-    fn get(&self, id: NodeId) -> &Node<'a> {
+    pub fn get(&self, id: NodeId) -> &Node<'a> {
         &(self.0)[id]
     }
 }
@@ -73,7 +80,7 @@ impl<'a> NodeArena<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Lattice<'a, D: Dict<'a> + 'a> {
     dic: &'a D,
-    arena: NodeArena<'a>,
+    pub arena: NodeArena<'a>,
     end_nodes: Vec<Vec<NodeId>>,
     prev_table: HashMap<NodeId, NodeId>,
     cost_table: HashMap<NodeId, i64>,
@@ -95,12 +102,14 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
             }
         });
         end_nodes[0].push(bos);
+        let mut cost_table = HashMap::new();
+        cost_table.insert(bos, 0);
         Lattice {
             dic: dic,
             arena: arena,
             end_nodes: end_nodes,
             prev_table: HashMap::new(),
-            cost_table: HashMap::new(),
+            cost_table: cost_table,
             pointer: 0,
         }
     }
@@ -115,7 +124,6 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
             }
         });
         let node = self.arena.get(id);
-        self.end_nodes[self.pointer + node.surface().chars().count()].push(id);
         for &enode_id in &self.end_nodes[self.pointer] {
             let enode = self.arena.get(enode_id);
             let cost = self.dic.connection_cost(enode.kind.right_id(), node.kind.left_id()) as i64 +
@@ -126,12 +134,13 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
                 self.prev_table.insert(id, enode_id);
             }
         }
+        self.end_nodes[self.pointer + node.surface_len()].push(id);
     }
 
     pub fn forward(&mut self) -> usize {
         let old = self.pointer;
         self.pointer += 1;
-        while !self.end_nodes[self.pointer].is_empty() {
+        while self.end_nodes[self.pointer].is_empty() {
             self.pointer += 1;
         }
         self.pointer - old
@@ -139,6 +148,24 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
 
     pub fn end(&mut self) {
         self.add(NodeKind::BosEos);
+    }
+
+    pub fn backward(&mut self) -> Vec<NodeId> {
+        if let Some(ref ps) = self.end_nodes.last() {
+            let mut path = Vec::new();
+            let mut p = ps[0];
+            debug_assert!(self.arena.get(p).kind == NodeKind::BosEos);
+            while let Some(prev) = self.prev_table.get(&p).cloned() {
+                path.push(p);
+                p = prev;
+            }
+            debug_assert!(self.arena.get(p).kind == NodeKind::BosEos);
+            path.push(p);
+            path.reverse();
+            path
+        } else {
+            Vec::new()
+        }
     }
 
     fn min_cost(&self, id: NodeId) -> i64 {
