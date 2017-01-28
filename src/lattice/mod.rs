@@ -10,21 +10,21 @@ pub enum NodeKind<'a> {
 }
 
 impl<'a> NodeKind<'a> {
-    fn left_id(&mut self) -> u16 {
+    fn left_id(&self) -> u16 {
         match *self {
             NodeKind::BOS => 0,
             NodeKind::Known(ref morph) => morph.left_id,
         }
     }
 
-    fn right_id(&mut self) -> u16 {
+    fn right_id(&self) -> u16 {
         match *self {
             NodeKind::BOS => 0,
             NodeKind::Known(ref morph) => morph.right_id,
         }
     }
 
-    fn weight(&mut self) -> i16 {
+    fn weight(&self) -> i16 {
         match *self {
             NodeKind::BOS => 0,
             NodeKind::Known(ref morph) => morph.weight,
@@ -105,7 +105,8 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
         }
     }
 
-    pub fn add(&mut self, start: usize, kind: NodeKind<'a>) {
+    pub fn add(&mut self, kind: NodeKind<'a>) {
+        let start = self.pointer;
         let id = self.arena.add_with_id(|id| {
             Node {
                 id: id,
@@ -114,11 +115,11 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
             }
         });
         let node = self.arena.get(id);
-        self.end_nodes[start + node.surface().chars().count()].push(id);
-        for enode_id in &self.end_nodes[self.pointer] {
-            let enode = self.arena.get(*enode_id);
+        self.end_nodes[self.pointer + node.surface().chars().count()].push(id);
+        for &enode_id in &self.end_nodes[self.pointer] {
+            let enode = self.arena.get(enode_id);
             let cost = self.dic.connection_cost(enode.kind.right_id(), node.kind.left_id()) as i64 +
-                       kind.weight() as i64;
+                       node.kind.weight() as i64;
             let total_cost = self.min_cost(enode_id) + cost;
             if total_cost < self.min_cost(id) {
                 self.cost_table.insert(id, total_cost);
@@ -136,7 +137,14 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
         self.pointer - old
     }
 
+    pub fn end(&mut self) {
+        self.add(NodeKind::BOS);
+    }
+
     fn min_cost(&self, id: NodeId) -> i64 {
-        self.cost_table.get(&id).unwrap_or(MAX_COST)
+        match self.cost_table.get(&id) {
+            Some(&cost) => cost,
+            None => MAX_COST,
+        }
     }
 }
