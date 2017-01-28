@@ -6,3 +6,4 @@ pub mod ipadic;
 pub mod morph;
 pub mod dict;
 pub mod matrix;
+pub mod lattice;
