@@ -5,7 +5,7 @@ use morph::Morph;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NodeKind<'a> {
-    Dummy,
+    BOS,
     Known(Morph<&'a str>),
 }
 
@@ -14,82 +14,58 @@ type NodeId = usize;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Node<'a> {
     id: NodeId,
+    start: usize,
     kind: NodeKind<'a>,
 }
 
 impl<'a> Node<'a> {
     pub fn surface(&self) -> &'a str {
         match self.kind {
-            NodeKind::Dummy => "",
+            NodeKind::BOS => "",
             NodeKind::Known(ref m) => m.surface,
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct NodeArena<'a>(Vec<Node<'a>>, Vec<Vec<NodeId>>);
+pub struct NodeArena<'a>(Vec<Node<'a>>);
 
 impl<'a> NodeArena<'a> {
-    fn new(size: usize) -> Self {
-        NodeArena(Vec::new(), vec![Vec::new(); size])
+    fn new() -> Self {
+        NodeArena(Vec::new())
     }
 
-    fn alloc_node(&mut self, kind: NodeKind<'a>) -> NodeId {
+    fn add_with_id<F: FnOnce(NodeId) -> Node<'a>>(&mut self, f: F) -> NodeId {
         let id = self.0.len();
-        let node = Node {
-            id: id,
-            kind: kind,
-        };
+        let node = f(id);
         self.0.push(node);
         id
-    }
-
-    fn add_node(&mut self, char_pos: usize, kind: NodeKind<'a>) {
-        let id = self.alloc_node(kind);
-        (self.1)[char_pos].push(id);
     }
 
     fn get(&self, id: NodeId) -> &Node<'a> {
         &(self.0)[id]
     }
-
-    fn get_on_pos(&self, char_pos: usize) -> &[NodeId] {
-        (self.1)[char_pos].as_slice()
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct LatticeState {
-    prev_list: HashMap<NodeId, NodeId>,
-    cost_table: HashMap<NodeId, i64>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Lattice<'a>{
-    nodes: NodeArena<'a>,
+pub struct Lattice<'a, D: Dict<'a> + 'a>{
+    dic: &'a D,
+    arena: NodeArena<'a>,
+    end_nodes: Vec<Vec<NodeId>>,
     prev_table: HashMap<NodeId, NodeId>,
     cost_table: HashMap<NodeId, i64>,
 }
 
-impl<'a>Lattice<'a> {
-    pub fn build<D: Dict<'a>>(input: &'a str, dic: &'a D) -> Self {
-        let char_count = input.chars().count();
-        let mut nodes = NodeArena::new(char_count);
-
-        nodes.add_node(0, NodeKind::Dummy);
-        nodes.add_node(char_count + 1, NodeKind::Dummy);
-        for (char_pos, (pos, _)) in input.char_indices().enumerate() {
-            if nodes.get_on_pos(char_pos).is_empty() {
-                // if char_pos is not end of any morphs, skip here.
-                continue;
-            }
-            let token = &input[pos..];
-            for morph in dic.lookup_str_iter(token) {
-                nodes.add_node(char_pos, NodeKind::Known(morph));
-            }
-        }
+impl<'a, D: Dict<'a> + 'a>Lattice<'a, D> {
+    pub fn new(char_size: usize, dic: &'a D) -> Self {
+        let mut arena = NodeArena::new();
+        let mut end_nodes = vec![Vec::new(); char_size + 2];
+        let bos = arena.add_with_id(|id| Node { id: id, start: 0, kind: NodeKind::BOS });
+        end_nodes[0].push(bos);
         Lattice {
-            nodes: nodes,
+            dic: dic,
+            arena: arena,
+            end_nodes: end_nodes,
             prev_table: HashMap::new(),
             cost_table: HashMap::new(),
         }
