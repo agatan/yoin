@@ -4,6 +4,7 @@ use std::iter::Iterator;
 use fst::{Fst, FstIter};
 
 use morph::Morph;
+use matrix::Matrix;
 
 pub trait Dict<'a> {
     type Iterator: Iterator<Item=Morph<&'a str>>;
@@ -17,25 +18,29 @@ pub trait Dict<'a> {
     fn lookup_str(&'a self, input: &'a str) -> Vec<Morph<&'a str>> {
         self.lookup_str_iter(input).collect()
     }
+
+    fn connection_cost(&self, left_id: u32, right_id: u32) -> i16;
 }
 
 #[derive(Debug, Clone)]
-pub struct FstDict<T: AsRef<[u8]>> {
+pub struct FstDict<T: AsRef<[u8]>, U: AsRef<[i16]>> {
     morph_bytes: T,
     fst: Fst<T>,
+    matrix: Matrix<U>,
 }
 
-impl<'a> FstDict<&'a [u8]> {
-    pub unsafe fn from_bytes(bytecodes: &'a [u8], morph_bytes: &'a [u8]) -> Self {
+impl<'a> FstDict<&'a [u8], &'a [i16]> {
+    pub unsafe fn from_bytes(bytecodes: &'a [u8], morph_bytes: &'a [u8], matrix: &'a [u8]) -> Self {
         FstDict {
             morph_bytes: morph_bytes,
             fst: Fst::from_bytes(bytecodes),
+            matrix: Matrix::decode(matrix),
         }
     }
 }
 
-impl FstDict<Vec<u8>> {
-    pub fn build<S: AsRef<str>>(morphs: &[Morph<S>]) -> Self {
+impl <U: AsRef<[i16]>> FstDict<Vec<u8>, U> {
+    pub fn build<S: AsRef<str>>(morphs: &[Morph<S>], matrix: Matrix<U>) -> Self {
         let mut morph_bytes = Vec::new();
         let mut fst_inputs = Vec::new();
         for morph in morphs {
@@ -49,11 +54,12 @@ impl FstDict<Vec<u8>> {
         FstDict {
             morph_bytes: morph_bytes,
             fst: fst,
+            matrix: matrix,
         }
     }
 }
 
-impl<'a, T: AsRef<[u8]>> Dict<'a> for FstDict<T> {
+impl<'a, T: AsRef<[u8]>, U: AsRef<[i16]>> Dict<'a> for FstDict<T, U> {
     type Iterator = Iter<'a>;
 
     fn lookup_iter(&'a self, input: &'a [u8]) -> Iter<'a> {
@@ -61,6 +67,10 @@ impl<'a, T: AsRef<[u8]>> Dict<'a> for FstDict<T> {
             morph_bytes: self.morph_bytes.as_ref(),
             iter: self.fst.run_iter(input),
         }
+    }
+
+    fn connection_cost(&self, left_id: u32, right_id: u32) -> i16 {
+        self.matrix[(left_id, right_id)]
     }
 }
 
@@ -88,6 +98,7 @@ impl<'a> Iterator for Iter<'a> {
 mod tests {
     use super::*;
     use morph::Morph;
+    use matrix::Matrix;
 
     #[test]
     fn test_build_lookup() {
@@ -119,7 +130,8 @@ mod tests {
                               weight: 4,
                               contents: "contents 4",
                           }];
-        let dict = FstDict::build(&morphs);
+        let matrix = Matrix::with_zeros(0, 0);
+        let dict = FstDict::build(&morphs, matrix);
         let results = dict.lookup_str("すもも");
         assert_eq!(results.len(), morphs.len());
         // the order of lookup results is not fixed.
