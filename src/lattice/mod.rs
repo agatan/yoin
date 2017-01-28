@@ -91,7 +91,7 @@ pub struct Lattice<'a, D: Dict<'a> + 'a> {
 const MAX_COST: i64 = ::std::i32::MAX as i64;
 
 impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
-    pub fn new(char_size: usize, dic: &'a D) -> Self {
+    fn new(char_size: usize, dic: &'a D) -> Self {
         let mut arena = NodeArena::new();
         let mut end_nodes = vec![Vec::new(); char_size + 2];
         let bos = arena.add_with_id(|id| {
@@ -114,7 +114,7 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
         }
     }
 
-    pub fn add(&mut self, kind: NodeKind<'a>) {
+    fn add(&mut self, kind: NodeKind<'a>) {
         let start = self.pointer;
         let id = self.arena.add_with_id(|id| {
             Node {
@@ -137,7 +137,7 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
         self.end_nodes[self.pointer + node.surface_len()].push(id);
     }
 
-    pub fn forward(&mut self) -> usize {
+    fn forward(&mut self) -> usize {
         let old = self.pointer;
         self.pointer += 1;
         while self.end_nodes[self.pointer].is_empty() {
@@ -146,11 +146,27 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
         self.pointer - old
     }
 
-    pub fn end(&mut self) {
+    fn end(&mut self) {
         self.add(NodeKind::BosEos);
     }
 
-    pub fn backward(&mut self) -> Vec<NodeId> {
+    pub fn build(input: &'a str, dic: &'a D) -> Self {
+        let mut la = Lattice::new(input.chars().count(), dic);
+        let mut input_chars = input.chars();
+        while !input_chars.as_str().is_empty() {
+            for m in dic.lookup_str_iter(input_chars.as_str()) {
+                la.add(NodeKind::Known(m));
+            }
+            let cnt = la.forward();
+            for _ in 0..cnt {
+                input_chars.next();
+            }
+        }
+        la.end();
+        la
+    }
+
+    pub fn output(&self) -> Vec<NodeId> {
         if let Some(ref ps) = self.end_nodes.last() {
             let mut path = Vec::new();
             let mut p = ps[0];
@@ -160,7 +176,6 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
                 p = prev;
             }
             debug_assert!(self.arena.get(p).kind == NodeKind::BosEos);
-            path.push(p);
             path.reverse();
             path
         } else {
