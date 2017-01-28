@@ -49,8 +49,8 @@ fn build_morph(s: &str) -> Result<Morph<&str>, Error> {
         return Err(Error::InvalidMorph);
     }
     let surface = tokens[0];
-    let left_id = tokens[1].parse::<i16>().map_err(|_| Error::InvalidMorph)?;
-    let right_id = tokens[2].parse::<i16>().map_err(|_| Error::InvalidMorph)?;
+    let left_id = tokens[1].parse::<u16>().map_err(|_| Error::InvalidMorph)?;
+    let right_id = tokens[2].parse::<u16>().map_err(|_| Error::InvalidMorph)?;
     let weight = tokens[3].parse::<i16>().map_err(|_| Error::InvalidMorph)?;
     let contents = tokens[4];
     Ok(Morph {
@@ -84,8 +84,8 @@ fn read_matrix<P: AsRef<Path>>(path: P) -> Result<Matrix<Vec<i16>>, Error> {
     if width_height.len() != 2 {
         return Err(Error::InvalidMatrix);
     }
-    let width = width_height[0].parse::<u32>().map_err(|_| Error::InvalidMatrix)?;
-    let height = width_height[1].parse::<u32>().map_err(|_| Error::InvalidMatrix)?;
+    let width = width_height[0].parse::<u16>().map_err(|_| Error::InvalidMatrix)?;
+    let height = width_height[1].parse::<u16>().map_err(|_| Error::InvalidMatrix)?;
     let mut matrix = Matrix::with_zeros(width, height);
     for line in reader.lines() {
         let line = line?;
@@ -93,8 +93,8 @@ fn read_matrix<P: AsRef<Path>>(path: P) -> Result<Matrix<Vec<i16>>, Error> {
         if tokens.len() != 3 {
             return Err(Error::InvalidMatrix);
         }
-        let w = tokens[0].parse::<u32>().map_err(|_| Error::InvalidMatrix)?;
-        let h = tokens[1].parse::<u32>().map_err(|_| Error::InvalidMatrix)?;
+        let w = tokens[0].parse::<u16>().map_err(|_| Error::InvalidMatrix)?;
+        let h = tokens[1].parse::<u16>().map_err(|_| Error::InvalidMatrix)?;
         let cost = tokens[2].parse::<i16>().map_err(|_| Error::InvalidMatrix)?;
         matrix[(w, h)] = cost;
     }

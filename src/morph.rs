@@ -9,8 +9,8 @@ pub struct Morph<S>
     where S: AsRef<str>
 {
     pub surface: S,
-    pub left_id: i16,
-    pub right_id: i16,
+    pub left_id: u16,
+    pub right_id: u16,
     pub weight: i16,
     pub contents: S,
 }
@@ -20,8 +20,8 @@ impl<S: AsRef<str>> Morph<S> {
         let surface_bytes = self.surface.as_ref().as_bytes();
         w.write_u32::<O>(surface_bytes.len() as u32)?;
         w.write_all(surface_bytes)?;
-        w.write_i16::<O>(self.left_id)?;
-        w.write_i16::<O>(self.right_id)?;
+        w.write_u16::<O>(self.left_id)?;
+        w.write_u16::<O>(self.right_id)?;
         w.write_i16::<O>(self.weight)?;
         let contents_bytes = self.contents.as_ref().as_bytes();
         w.write_u32::<O>(contents_bytes.len() as u32)?;
@@ -42,10 +42,10 @@ impl<'a> Morph<&'a str> {
         let surface = ::std::str::from_utf8_unchecked(&bs[..surface_len as usize]);
         bs = &bs[surface_len as usize..];
 
-        let ptr = bs.as_ptr() as *const i16;
+        let ptr = bs.as_ptr() as *const u16;
         let left_id = *ptr;
         let right_id = *ptr.offset(1);
-        let weight = *ptr.offset(2);
+        let weight = *(ptr.offset(2) as *const i16);
         bs = &bs[::std::mem::size_of::<i16>() * 3..];
 
         let ptr = bs.as_ptr() as *const u32;
