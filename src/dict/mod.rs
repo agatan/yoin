@@ -8,7 +8,7 @@ mod morph;
 pub use self::morph::Morph;
 
 pub mod fst;
-use self::fst::{Fst, FstIter};
+use self::fst::Fst;
 
 pub trait Dict<'a> {
     type Iterator: Iterator<Item=Morph<&'a str>>;
@@ -80,7 +80,7 @@ impl<'a, T: AsRef<[u8]>, U: AsRef<[i16]>> Dict<'a> for FstDict<T, U> {
 
 pub struct Iter<'a> {
     morph_bytes: &'a [u8],
-    iter: FstIter<'a>,
+    iter: fst::Iter<'a>,
 }
 
 impl<'a> Iter<'a> {

@@ -19,8 +19,8 @@ impl<'a> Fst<&'a [u8]> {
 }
 
 impl<T: AsRef<[u8]>> Fst<T> {
-    pub fn run_iter<'a>(&'a self, input: &'a [u8]) -> FstIter<'a> {
-        FstIter::new(self.bytecode.as_ref(), input)
+    pub fn run_iter<'a>(&'a self, input: &'a [u8]) -> Iter<'a> {
+        Iter::new(self.bytecode.as_ref(), input)
     }
 
     pub fn run<'a>(&'a self, input: &'a [u8]) -> Vec<Accept> {
@@ -40,7 +40,7 @@ impl Fst<Vec<u8>> {
 }
 
 #[derive(Debug, Clone)]
-pub struct FstIter<'a> {
+pub struct Iter<'a> {
     pc: usize,
     iseq: &'a [u8],
     data: [u8; 4],
@@ -55,9 +55,9 @@ pub struct Accept {
     pub value: u32,
 }
 
-impl<'a> FstIter<'a> {
+impl<'a> Iter<'a> {
     pub fn new(iseq: &'a [u8], input: &'a [u8]) -> Self {
-        FstIter {
+        Iter {
             pc: 0,
             iseq: iseq,
             data: [0; 4],
@@ -123,7 +123,7 @@ impl<'a> FstIter<'a> {
     }
 }
 
-impl<'a> Iterator for FstIter<'a> {
+impl<'a> Iterator for Iter<'a> {
     type Item = Accept;
 
     fn next(&mut self) -> Option<Self::Item> {
