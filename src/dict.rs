@@ -5,22 +5,36 @@ use fst::{Fst, FstIter};
 
 use morph::Morph;
 
+pub trait Dict<'a> {
+    type Iterator: Iterator<Item=Result<Morph<&'a str>, String>>;
+    fn lookup_iter(&'a self, input: &'a [u8]) -> Self::Iterator;
+    fn lookup(&'a self, input: &'a [u8]) -> Result<Vec<Morph<&'a str>>, String> {
+        self.lookup_iter(input).collect()
+    }
+    fn lookup_str_iter(&'a self, input: &'a str) -> Self::Iterator {
+        self.lookup_iter(input.as_bytes())
+    }
+    fn lookup_str(&'a self, input: &'a str) -> Result<Vec<Morph<&'a str>>, String> {
+        self.lookup_str_iter(input).collect()
+    }
+}
+
 #[derive(Debug, Clone)]
-pub struct Dict<T: AsRef<[u8]>> {
+pub struct FstDict<T: AsRef<[u8]>> {
     morph_bytes: T,
     fst: Fst<T>,
 }
 
-impl<'a> Dict<&'a [u8]> {
+impl<'a> FstDict<&'a [u8]> {
     pub unsafe fn from_bytes(bytecodes: &'a [u8], morph_bytes: &'a [u8]) -> Self {
-        Dict {
+        FstDict {
             morph_bytes: morph_bytes,
             fst: Fst::from_bytes(bytecodes),
         }
     }
 }
 
-impl Dict<Vec<u8>> {
+impl FstDict<Vec<u8>> {
     pub fn build<S: AsRef<str>>(morphs: &[Morph<S>]) -> Self {
         let mut morph_bytes = Vec::new();
         let mut fst_inputs = Vec::new();
@@ -32,31 +46,21 @@ impl Dict<Vec<u8>> {
         }
         fst_inputs.sort();
         let fst = Fst::build(fst_inputs);
-        Dict {
+        FstDict {
             morph_bytes: morph_bytes,
             fst: fst,
         }
     }
 }
 
-impl<T: AsRef<[u8]>> Dict<T> {
-    pub fn lookup_iter<'a>(&'a self, input: &'a [u8]) -> Iter<'a> {
+impl<'a, T: AsRef<[u8]>> Dict<'a> for FstDict<T> {
+    type Iterator = Iter<'a>;
+
+    fn lookup_iter(&'a self, input: &'a [u8]) -> Iter<'a> {
         Iter {
             morph_bytes: self.morph_bytes.as_ref(),
             iter: self.fst.run_iter(input),
         }
-    }
-
-    pub fn lookup<'a>(&'a self, input: &'a [u8]) -> Result<Vec<Morph<&'a str>>, String> {
-        self.lookup_iter(input).collect()
-    }
-
-    pub fn lookup_str_iter<'a>(&'a self, input: &'a str) -> Iter<'a> {
-        self.lookup_iter(input.as_bytes())
-    }
-
-    pub fn lookup_str<'a>(&'a self, input: &'a str) -> Result<Vec<Morph<&'a str>>, String> {
-        self.lookup(input.as_bytes())
     }
 }
 
@@ -119,7 +123,7 @@ mod tests {
                               weight: 4,
                               contents: "contents 4",
                           }];
-        let dict = Dict::build(&morphs);
+        let dict = FstDict::build(&morphs);
         let results = dict.lookup_str("すもも").unwrap();
         assert_eq!(results.len(), morphs.len());
         // the order of lookup results is not fixed.
