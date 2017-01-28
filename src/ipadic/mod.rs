@@ -1,5 +1,4 @@
-use dict::FstDict;
-use matrix::Matrix;
+use dict::{FstDict, Matrix};
 
 pub const BYTECODE: &'static [u8] = include_bytes!("../../data/ipadic.dic");
 pub const MORPHS: &'static [u8] = include_bytes!("../../data/ipadic.morph");
