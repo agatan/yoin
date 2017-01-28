@@ -71,7 +71,7 @@ impl<'a> NodeArena<'a> {
         id
     }
 
-    pub fn get(&self, id: NodeId) -> &Node<'a> {
+    fn get(&self, id: NodeId) -> &Node<'a> {
         &(self.0)[id]
     }
 }
@@ -79,7 +79,7 @@ impl<'a> NodeArena<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Lattice<'a, D: Dict<'a> + 'a> {
     dic: &'a D,
-    pub arena: NodeArena<'a>,
+    arena: NodeArena<'a>,
     end_nodes: Vec<Vec<NodeId>>,
     prev_table: HashMap<NodeId, NodeId>,
     cost_table: HashMap<NodeId, i64>,
@@ -165,7 +165,7 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
         la
     }
 
-    pub fn output(&self) -> Vec<NodeId> {
+    pub fn output(&self) -> Vec<&Node<'a>> {
         if let Some(ref ps) = self.end_nodes.last() {
             let mut path = Vec::new();
             let mut p = ps[0];
@@ -175,8 +175,7 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
                 p = prev;
             }
             debug_assert!(self.arena.get(p).kind == NodeKind::BosEos);
-            path.reverse();
-            path
+            path.into_iter().rev().map(|id| self.arena.get(id)).collect()
         } else {
             Vec::new()
         }
