@@ -167,7 +167,7 @@ pub struct Mast {
 
 
 impl Mast {
-    pub fn build<'a, I: IntoIterator<Item = (&'a [u8], i32)>>(pairs: I) -> Mast {
+    pub fn build<'a, I: IntoIterator<Item = (&'a [u8], u32)>>(pairs: I) -> Mast {
         let mut table = StateTable::new();
         let mut buf: Vec<Rc<RefCell<State>>> = Vec::new();
         let mut prev_word: &[u8] = b"";
@@ -312,7 +312,7 @@ impl Mast {
 
     /// Run MAST directly. (for debugging)
     #[allow(unused)]
-    pub fn run(&self, input: &[u8]) -> Result<Vec<i32>, String> {
+    pub fn run(&self, input: &[u8]) -> Result<Vec<u32>, String> {
         let mut state = self.initial.clone();
         let mut buf = [0; 4];
         let mut i = 0;
@@ -356,7 +356,7 @@ impl Mast {
 #[test]
 fn test_build() {
     use fst::op::build;
-    let samples: Vec<(&[u8], i32)> = vec![(b"a", !0)];
+    let samples: Vec<(&[u8], u32)> = vec![(b"a", !0)];
     let expected: Vec<u8> = vec![0b00000100, 0b01100001, 0b00000101, 0b00000000, 0b11111111,
                                  0b11111111, 0b11111111, 0b11111111, 0b01000000, 0b01100000,
                                  0b01000000];

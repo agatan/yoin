@@ -33,7 +33,7 @@ impl<T: AsRef<[u8]>> Fst<T> {
 }
 
 impl Fst<Vec<u8>> {
-    pub fn build<'a, I: IntoIterator<Item = (&'a [u8], i32)>>(inputs: I) -> Self {
+    pub fn build<'a, I: IntoIterator<Item = (&'a [u8], u32)>>(inputs: I) -> Self {
         let m = mast::Mast::build(inputs);
         Fst { bytecode: op::build(m) }
     }
@@ -52,7 +52,7 @@ pub struct FstIter<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Accept {
     pub len: usize,
-    pub value: i32,
+    pub value: u32,
 }
 
 impl<'a> FstIter<'a> {
@@ -187,16 +187,16 @@ impl<'a> Iterator for FstIter<'a> {
     }
 }
 
-fn gen_data(data: &[u8; 4]) -> i32 {
+fn gen_data(data: &[u8; 4]) -> u32 {
     let mut from: &[u8] = data;
-    from.read_i32::<LittleEndian>().unwrap()
+    from.read_u32::<LittleEndian>().unwrap()
 }
 
 #[test]
 fn test_run() {
     use std::collections::HashSet;
 
-    let samples: Vec<(&[u8], i32)> = vec![(b"ab", 0xFF), (b"abc", 0), (b"abc", !0), (b"abd", 1)];
+    let samples: Vec<(&[u8], u32)> = vec![(b"ab", 0xFF), (b"abc", 0), (b"abc", !0), (b"abd", 1)];
     let iseq = Fst::build(samples);
     let accs: HashSet<_> = iseq.run(b"abc").unwrap().into_iter().collect();
     let expects: HashSet<_> = vec![Accept {
@@ -216,7 +216,7 @@ fn test_run() {
 #[test]
 fn test_op() {
     use std::collections::HashSet;
-    let samples: Vec<(&[u8], i32)> = vec![(b"apr", 0),
+    let samples: Vec<(&[u8], u32)> = vec![(b"apr", 0),
                                           (b"aug", 1),
                                           (b"dec", 2),
                                           (b"feb", 3),

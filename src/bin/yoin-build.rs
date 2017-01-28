@@ -62,14 +62,14 @@ fn build_morph(s: &str) -> Result<Morph<&str>, Error> {
     })
 }
 
-fn build_entries(morphs: &[String]) -> Result<(Vec<(&[u8], i32)>, Vec<u8>), Error> {
+fn build_entries(morphs: &[String]) -> Result<(Vec<(&[u8], u32)>, Vec<u8>), Error> {
     let morphs = morphs.iter().map(|s| build_morph(s));
     let mut inputs = Vec::new();
     let mut bytes = Vec::new();
     for morph in morphs {
         let morph = morph?;
         let index = bytes.len();
-        inputs.push((morph.surface.as_bytes(), index as i32));
+        inputs.push((morph.surface.as_bytes(), index as u32));
         morph.encode_native(&mut bytes)?;
     }
     Ok((inputs, bytes))
