@@ -42,7 +42,7 @@ impl<'a> Matrix<&'a [i16]> {
         let width = *ptr;
         let height = *ptr.offset(1);
         let ptr = ptr.offset(2) as *const i16;
-        let table = ::std::slice::from_raw_parts(ptr, (width * height) as usize);
+        let table = ::std::slice::from_raw_parts(ptr, width as usize * height as usize);
         Matrix {
             width: width,
             height: height,
