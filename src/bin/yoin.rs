@@ -19,8 +19,7 @@ fn main() {
 
     let la = Lattice::build(input.as_str(), &dict);
     let out = la.output();
-    for id in out {
-        let node = la.arena.get(id);
+    for node in out {
         println!("{:?}", node);
     }
 }
