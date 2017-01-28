@@ -19,7 +19,7 @@ pub trait Dict<'a> {
         self.lookup_str_iter(input).collect()
     }
 
-    fn connection_cost(&self, left_id: u32, right_id: u32) -> i16;
+    fn connection_cost(&self, left_id: u16, right_id: u16) -> i16;
 }
 
 #[derive(Debug, Clone)]
@@ -69,7 +69,7 @@ impl<'a, T: AsRef<[u8]>, U: AsRef<[i16]>> Dict<'a> for FstDict<T, U> {
         }
     }
 
-    fn connection_cost(&self, left_id: u32, right_id: u32) -> i16 {
+    fn connection_cost(&self, left_id: u16, right_id: u16) -> i16 {
         self.matrix[(left_id, right_id)]
     }
 }

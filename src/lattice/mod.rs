@@ -10,14 +10,14 @@ pub enum NodeKind<'a> {
 }
 
 impl<'a> NodeKind<'a> {
-    fn left_id(&mut self) -> i16 {
+    fn left_id(&mut self) -> u16 {
         match *self {
             NodeKind::BOS => 0,
             NodeKind::Known(ref morph) => morph.left_id,
         }
     }
 
-    fn right_id(&mut self) -> i16 {
+    fn right_id(&mut self) -> u16 {
         match *self {
             NodeKind::BOS => 0,
             NodeKind::Known(ref morph) => morph.right_id,
