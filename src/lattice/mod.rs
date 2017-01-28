@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use dict::Dict;
 use morph::Morph;
 
@@ -26,13 +28,13 @@ impl<'a> Node<'a> {
 pub struct Lattice<'a, D: Dict<'a>> {
     input: &'a str,
     dic: D,
-    node_list: Vec<Vec<Node<'a>>>,
+    node_list: HashMap<usize, Vec<Node<'a>>>,
 }
 
 impl<'a, D: Dict<'a>> Lattice<'a, D> {
     pub fn new(input: &'a str, dic: D) -> Self {
         let char_count = input.chars().count();
-        let node_list = vec![vec![]; char_count + 2]; // head and last
+        let node_list = HashMap::new();
         let mut la = Lattice {
             input: input,
             dic: dic,
@@ -49,6 +51,6 @@ impl<'a, D: Dict<'a>> Lattice<'a, D> {
             kind: kind,
             cost: 0,
         };
-        self.node_list[p].push(node);
+        self.node_list.entry(p).or_insert(Vec::new()).push(node);
     }
 }
