@@ -355,7 +355,7 @@ impl Mast {
 
 #[test]
 fn test_build() {
-    use fst::op::build;
+    use dict::fst::op::build;
     let samples: Vec<(&[u8], u32)> = vec![(b"a", !0)];
     let expected: Vec<u8> = vec![0b00000100, 0b01100001, 0b00000101, 0b00000000, 0b11111111,
                                  0b11111111, 0b11111111, 0b11111111, 0b01000000, 0b01100000,

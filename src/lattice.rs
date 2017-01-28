@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use dict::Dict;
-use morph::Morph;
+use dict::{Dict, Morph};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NodeKind<'a> {

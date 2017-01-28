@@ -1,9 +1,6 @@
 extern crate byteorder;
 
-pub mod fst;
+pub mod dict;
 #[cfg(feature = "ipadic")]
 pub mod ipadic;
-pub mod morph;
-pub mod dict;
-pub mod matrix;
 pub mod lattice;

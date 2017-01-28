@@ -14,9 +14,8 @@ use encoding::all::EUC_JP;
 
 extern crate yoin;
 
-use yoin::fst::Fst;
-use yoin::morph::Morph;
-use yoin::matrix::Matrix;
+use yoin::dict::fst::Fst;
+use yoin::dict::{Morph, Matrix};
 
 #[derive(Debug)]
 enum Error {

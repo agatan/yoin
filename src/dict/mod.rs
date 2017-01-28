@@ -1,10 +1,14 @@
 use std::convert::AsRef;
 use std::iter::Iterator;
 
-use fst::{Fst, FstIter};
+mod matrix;
+pub use self::matrix::Matrix;
 
-use morph::Morph;
-use matrix::Matrix;
+mod morph;
+pub use self::morph::Morph;
+
+pub mod fst;
+use self::fst::{Fst, FstIter};
 
 pub trait Dict<'a> {
     type Iterator: Iterator<Item=Morph<&'a str>>;
@@ -97,8 +101,7 @@ impl<'a> Iterator for Iter<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use morph::Morph;
-    use matrix::Matrix;
+    use super::matrix::Matrix;
 
     #[test]
     fn test_build_lookup() {
