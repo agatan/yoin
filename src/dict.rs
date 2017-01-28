@@ -41,7 +41,7 @@ impl FstDict<Vec<u8>> {
         for morph in morphs {
             let offset = morph_bytes.len();
             let surface = morph.surface.as_ref().as_bytes();
-            fst_inputs.push((surface, offset as i32));
+            fst_inputs.push((surface, offset as u32));
             morph.encode_native(&mut morph_bytes).unwrap();
         }
         fst_inputs.sort();
