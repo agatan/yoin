@@ -5,6 +5,7 @@ use std::env;
 
 extern crate yoin;
 
+use yoin::dict::Dict;
 use yoin::ipadic;
 
 fn main() {
