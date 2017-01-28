@@ -11,7 +11,7 @@ use yoin::ipadic;
 fn main() {
     let dict = ipadic::dictionary();
     let input = env::args().nth(1).unwrap();
-    let morphs = dict.lookup_str(input.as_str()).unwrap();
+    let morphs = dict.lookup_str(input.as_str());
     for morph in &morphs {
         println!("{}", morph);
     }
