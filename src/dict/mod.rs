@@ -101,7 +101,6 @@ impl<'a> Iterator for Iter<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::matrix::Matrix;
 
     #[test]
     fn test_build_lookup() {
