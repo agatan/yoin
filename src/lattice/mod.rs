@@ -5,28 +5,28 @@ use morph::Morph;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NodeKind<'a> {
-    BOS,
+    BosEos,
     Known(Morph<&'a str>),
 }
 
 impl<'a> NodeKind<'a> {
     fn left_id(&self) -> u16 {
         match *self {
-            NodeKind::BOS => 0,
+            NodeKind::BosEos => 0,
             NodeKind::Known(ref morph) => morph.left_id,
         }
     }
 
     fn right_id(&self) -> u16 {
         match *self {
-            NodeKind::BOS => 0,
+            NodeKind::BosEos => 0,
             NodeKind::Known(ref morph) => morph.right_id,
         }
     }
 
     fn weight(&self) -> i16 {
         match *self {
-            NodeKind::BOS => 0,
+            NodeKind::BosEos => 0,
             NodeKind::Known(ref morph) => morph.weight,
         }
     }
@@ -44,7 +44,7 @@ pub struct Node<'a> {
 impl<'a> Node<'a> {
     pub fn surface(&self) -> &'a str {
         match self.kind {
-            NodeKind::BOS => "",
+            NodeKind::BosEos => "",
             NodeKind::Known(ref m) => m.surface,
         }
     }
@@ -91,7 +91,7 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
             Node {
                 id: id,
                 start: 0,
-                kind: NodeKind::BOS,
+                kind: NodeKind::BosEos,
             }
         });
         end_nodes[0].push(bos);
@@ -138,7 +138,7 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
     }
 
     pub fn end(&mut self) {
-        self.add(NodeKind::BOS);
+        self.add(NodeKind::BosEos);
     }
 
     fn min_cost(&self, id: NodeId) -> i64 {
