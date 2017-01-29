@@ -6,6 +6,7 @@ use std::fmt;
 mod lattice;
 use self::lattice::{Lattice, Node, NodeKind};
 use dict::Dict;
+use dict::unknown::UnknownDict;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token<'a> {
@@ -63,21 +64,23 @@ impl<'a> Iterator for FeatureIter<'a> {
 }
 
 #[derive(Debug)]
-pub struct Tokenizer<'a, D: Dict<'a> + 'a> {
+pub struct Tokenizer<'a, D: Dict<'a> + 'a, Unk: UnknownDict> {
     dic: D,
+    unk_dic: Unk,
     _mark: PhantomData<&'a D>,
 }
 
-impl<'a, D: Dict<'a> + 'a> Tokenizer<'a, D> {
-    pub fn new_with_dic(dic: D) -> Self {
+impl<'a, D: Dict<'a> + 'a, Unk: UnknownDict> Tokenizer<'a, D, Unk> {
+    pub fn new_with_dic(dic: D, unk_dic: Unk) -> Self {
         Tokenizer {
             dic: dic,
+            unk_dic: unk_dic,
             _mark: PhantomData,
         }
     }
 
     pub fn tokenize(&'a self, input: &'a str) -> Vec<Token<'a>> {
-        let la = Lattice::build(input, &self.dic);
+        let la = Lattice::build(input, &self.dic, &self.unk_dic);
         la.into_output().into_iter().map(|node| Token::new(node)).collect()
     }
 }
