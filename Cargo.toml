@@ -11,3 +11,8 @@ clap = "2.20"
 [features]
 default = ["ipadic"]
 ipadic = []
+
+[[bin]]
+name = "yoin"
+doc = false
+path = "src/bin/yoin.rs"
