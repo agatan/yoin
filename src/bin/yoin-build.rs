@@ -5,7 +5,8 @@ extern crate byteorder;
 use std::fs::{self, File};
 use std::path::Path;
 use std::io::prelude::*;
-use std::io::BufReader;
+use std::io::{self, BufReader};
+use std::convert::From;
 use std::collections::HashMap;
 
 use clap::{App, Arg};
@@ -16,8 +17,22 @@ extern crate yoin;
 
 use yoin::dict::fst::Fst;
 use yoin::dict::{Morph, Matrix};
-use yoin::dict::unknown::{CharTable, UnkDict};
-use yoin::error::Error;
+use yoin::dict::unknown::{CharTable, UnkDict, Entry};
+
+#[derive(Debug)]
+enum Error {
+    InvalidMorph,
+    IO(io::Error),
+    InvalidEncode,
+    InvalidMatrix,
+    InvalidChardef,
+}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Error {
+        Error::IO(err)
+    }
+}
 
 fn read_csv<P: AsRef<Path>>(buf: &mut Vec<String>, path: P) -> Result<(), Error> {
     let mut file = File::open(path)?;
