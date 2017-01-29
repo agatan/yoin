@@ -10,6 +10,8 @@ pub use self::morph::Morph;
 pub mod fst;
 use self::fst::Fst;
 
+mod chardef;
+
 pub trait Dict<'a> {
     type Iterator: Iterator<Item=Morph<&'a str>>;
     fn lookup_iter(&'a self, input: &'a [u8]) -> Self::Iterator;
