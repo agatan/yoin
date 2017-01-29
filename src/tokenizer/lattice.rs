@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use dict::{Dict, Morph};
+use dict::unknown::UnknownDict;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NodeKind<'a> {
@@ -70,8 +71,9 @@ impl<'a> NodeArena<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Lattice<'a, D: Dict<'a> + 'a> {
+pub struct Lattice<'a, D: Dict<'a> + 'a, Unk: UnknownDict + 'a> {
     dic: &'a D,
+    unk_dic: &'a Unk,
     arena: NodeArena<'a>,
     end_nodes: Vec<Vec<NodeId>>,
     prev_table: HashMap<NodeId, NodeId>,
@@ -82,8 +84,8 @@ pub struct Lattice<'a, D: Dict<'a> + 'a> {
 /// care about overflow...
 const MAX_COST: i64 = ::std::i32::MAX as i64;
 
-impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
-    fn new(char_size: usize, dic: &'a D) -> Self {
+impl<'a, D: Dict<'a> + 'a, Unk: UnknownDict + 'a> Lattice<'a, D, Unk> {
+    fn new(char_size: usize, dic: &'a D, unk_dic: &'a Unk) -> Self {
         let mut arena = NodeArena::new();
         let mut end_nodes = vec![Vec::new(); char_size + 2];
         let bos = arena.add(Node {
@@ -95,6 +97,7 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
         cost_table.insert(bos, 0);
         Lattice {
             dic: dic,
+            unk_dic: unk_dic,
             arena: arena,
             end_nodes: end_nodes,
             prev_table: HashMap::new(),
@@ -136,9 +139,10 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
         self.add(NodeKind::EOS);
     }
 
-    pub fn build(input: &'a str, dic: &'a D) -> Self {
-        let mut la = Lattice::new(input.chars().count(), dic);
+    pub fn build(input: &'a str, dic: &'a D, unk_dic: &'a Unk) -> Self {
+        let mut la = Lattice::new(input.chars().count(), dic, unk_dic);
         let mut input_chars = input.chars();
+
         while !input_chars.as_str().is_empty() {
             for m in dic.lookup_str_iter(input_chars.as_str()) {
                 la.add(NodeKind::Known(m));
@@ -148,6 +152,7 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
                 input_chars.next();
             }
         }
+
         la.end();
         la
     }
