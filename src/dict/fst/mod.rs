@@ -1,6 +1,5 @@
 use std::convert::AsRef;
 use std::iter::IntoIterator;
-use byteorder::{LittleEndian, ReadBytesExt};
 
 mod mast;
 mod op;
@@ -68,15 +67,15 @@ impl<'a> Iter<'a> {
     }
 
     fn read_u16(&mut self) -> u16 {
-        let mut from = &self.iseq[self.pc..];
+        let from = self.iseq[self.pc..].as_ptr() as *const u16;
         self.pc += 2; // skip 16 bits
-        from.read_u16::<LittleEndian>().unwrap()
+        unsafe { *from }
     }
 
     fn read_u32(&mut self) -> u32 {
-        let mut from = &self.iseq[self.pc..];
+        let from = self.iseq[self.pc..].as_ptr() as *const u32;
         self.pc += 4; // skip 32 bits
-        from.read_u32::<LittleEndian>().unwrap()
+        unsafe { *from }
     }
 
     fn get_jump_offset(&mut self, jump_size: u8) -> usize {
@@ -178,8 +177,8 @@ impl<'a> Iterator for Iter<'a> {
 }
 
 fn gen_data(data: &[u8; 4]) -> u32 {
-    let mut from: &[u8] = data;
-    from.read_u32::<LittleEndian>().unwrap()
+    let from = data.as_ptr() as *const u32;
+    unsafe { *from }
 }
 
 #[test]
