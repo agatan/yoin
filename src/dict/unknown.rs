@@ -135,11 +135,7 @@ fn test_encode_decode() {
 
     let compiled = unsafe { CompiledCharTable::decode(&buf) };
 
-    let tests = vec![
-        ('0', (true, false, 0)),
-        ('あ', (false, true, 1)),
-        ('a', (false, false, 2)),
-    ];
+    let tests = vec![('0', (true, false, 0)), ('あ', (false, true, 1)), ('a', (false, false, 2))];
 
     for (ch, (i, g, l)) in tests {
         let category = compiled.char_category(ch);
@@ -194,3 +190,84 @@ impl<'a> Entry<'a> {
     }
 }
 
+pub trait UnknownDict: CharCategory {
+    fn fetch_entries<'a>(&'a self, cate: Category) -> Vec<Entry<'a>>;
+}
+
+pub struct UnkDict {
+    indices: Vec<u32>, // Category -> Index of initial entry
+    counts: Vec<u32>, // Category -> Counts of entries
+    entry_offsets: Vec<u32>,
+    entries: Vec<u8>,
+    categories: CharTable,
+}
+
+impl CharCategory for UnkDict {
+    fn char_category(&self, ch: char) -> Category {
+        self.categories.char_category(ch)
+    }
+
+    fn invoke(&self, cate: Category) -> bool {
+        self.categories.invoke(cate)
+    }
+
+    fn group(&self, cate: Category) -> bool {
+        self.categories.group(cate)
+    }
+
+    fn length(&self, cate: Category) -> u8 {
+        self.categories.length(cate)
+    }
+}
+
+impl UnknownDict for UnkDict {
+    fn fetch_entries<'a>(&'a self, cate: Category) -> Vec<Entry<'a>> {
+        let count = self.counts[cate as usize] as usize;
+        let index = self.indices[cate as usize] as usize;
+        let offsets = &self.entry_offsets[index..index + count];
+        let mut results = Vec::with_capacity(count);
+        for &offset in offsets {
+            results.push(unsafe { Entry::decode(&self.entries[offset as usize..]) });
+        }
+        results
+    }
+}
+
+pub struct CompiledUnkDict<'a> {
+    indices: &'a [u32],
+    counts: &'a [u32],
+    entry_offsets: &'a [u32],
+    entries: &'a [u8],
+    categories: CompiledCharTable<'a>,
+}
+
+impl<'a> CharCategory for CompiledUnkDict<'a> {
+    fn char_category(&self, ch: char) -> Category {
+        self.categories.char_category(ch)
+    }
+
+    fn invoke(&self, cate: Category) -> bool {
+        self.categories.invoke(cate)
+    }
+
+    fn group(&self, cate: Category) -> bool {
+        self.categories.group(cate)
+    }
+
+    fn length(&self, cate: Category) -> u8 {
+        self.categories.length(cate)
+    }
+}
+
+impl<'a> UnknownDict for CompiledUnkDict<'a> {
+    fn fetch_entries<'b>(&'b self, cate: Category) -> Vec<Entry<'b>> {
+        let count = self.counts[cate as usize] as usize;
+        let index = self.indices[cate as usize] as usize;
+        let offsets = &self.entry_offsets[index..index + count];
+        let mut results = Vec::with_capacity(count);
+        for &offset in offsets {
+            results.push(unsafe { Entry::decode(&self.entries[offset as usize..]) });
+        }
+        results
+    }
+}
