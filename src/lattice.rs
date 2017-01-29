@@ -35,7 +35,6 @@ type NodeId = usize;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Node<'a> {
-    id: NodeId,
     start: usize,
     kind: NodeKind<'a>,
 }
@@ -64,9 +63,8 @@ impl<'a> NodeArena<'a> {
         NodeArena(Vec::new())
     }
 
-    fn add_with_id<F: FnOnce(NodeId) -> Node<'a>>(&mut self, f: F) -> NodeId {
+    fn add(&mut self, node: Node<'a>) -> NodeId {
         let id = self.0.len();
-        let node = f(id);
         self.0.push(node);
         id
     }
@@ -93,12 +91,9 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
     fn new(char_size: usize, dic: &'a D) -> Self {
         let mut arena = NodeArena::new();
         let mut end_nodes = vec![Vec::new(); char_size + 2];
-        let bos = arena.add_with_id(|id| {
-            Node {
-                id: id,
-                start: 0,
-                kind: NodeKind::BosEos,
-            }
+        let bos = arena.add(Node {
+            start: 0,
+            kind: NodeKind::BosEos,
         });
         end_nodes[0].push(bos);
         let mut cost_table = HashMap::new();
@@ -115,12 +110,9 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
 
     fn add(&mut self, kind: NodeKind<'a>) {
         let start = self.pointer;
-        let id = self.arena.add_with_id(|id| {
-            Node {
-                id: id,
-                start: start,
-                kind: kind,
-            }
+        let id = self.arena.add(Node {
+            start: start,
+            kind: kind,
         });
         let node = self.arena.get(id);
         for &enode_id in &self.end_nodes[self.pointer] {
@@ -165,7 +157,7 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
         la
     }
 
-    pub fn output(&self) -> Vec<&Node<'a>> {
+    fn rev_output_path(&self) -> Vec<NodeId> {
         if let Some(ref ps) = self.end_nodes.last() {
             let mut path = Vec::new();
             let mut p = ps[0];
@@ -175,10 +167,26 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
                 p = prev;
             }
             debug_assert!(self.arena.get(p).kind == NodeKind::BosEos);
-            path.into_iter().rev().map(|id| self.arena.get(id)).collect()
+            path
         } else {
             Vec::new()
         }
+    }
+
+    pub fn output(&self) -> Vec<&Node<'a>> {
+        let path = self.rev_output_path();
+        path.into_iter().rev().map(|id| self.arena.get(id)).collect()
+    }
+
+    pub fn into_output(self) -> Vec<Node<'a>> {
+        let path = self.rev_output_path();
+        let NodeArena(mut nodes) = self.arena;
+        let mut results = Vec::new();
+        for p in path {
+            results.push(nodes.swap_remove(p));
+        }
+        results.reverse();
+        results
     }
 
     fn min_cost(&self, id: NodeId) -> i64 {
