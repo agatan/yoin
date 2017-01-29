@@ -195,11 +195,11 @@ pub trait UnknownDict: CharCategory {
 }
 
 pub struct UnkDict {
-    indices: Vec<u32>, // Category -> Index of initial entry
-    counts: Vec<u32>, // Category -> Counts of entries
-    entry_offsets: Vec<u32>,
-    entries: Vec<u8>,
-    categories: CharTable,
+    pub indices: Vec<u32>, // Category -> Index of initial entry
+    pub counts: Vec<u32>, // Category -> Counts of entries
+    pub entry_offsets: Vec<u32>,
+    pub entries: Vec<u8>,
+    pub categories: CharTable,
 }
 
 impl CharCategory for UnkDict {
@@ -230,6 +230,32 @@ impl UnknownDict for UnkDict {
             results.push(unsafe { Entry::decode(&self.entries[offset as usize..]) });
         }
         results
+    }
+}
+
+impl UnkDict {
+    pub fn encode<W: Write, O: ByteOrder>(&self, mut w: W) -> io::Result<()> {
+        w.write_u32::<O>(self.indices.len() as u32)?;
+        for i in &self.indices {
+            w.write_u32::<O>(*i)?;
+        }
+        w.write_u32::<O>(self.counts.len() as u32)?;
+        for i in &self.counts {
+            w.write_u32::<O>(*i)?;
+        }
+        w.write_u32::<O>(self.entry_offsets.len() as u32)?;
+        for i in &self.entry_offsets {
+            w.write_u32::<O>(*i)?;
+        }
+        w.write_u32::<O>(self.entries.len() as u32)?;
+        for b in &self.entries {
+            w.write_u8(*b)?;
+        }
+        self.categories.encode(w)
+    }
+
+    pub fn encode_native<W: Write>(&self, w: W) -> io::Result<()> {
+        self.encode::<_, NativeEndian>(w)
     }
 }
 
@@ -269,5 +295,38 @@ impl<'a> UnknownDict for CompiledUnkDict<'a> {
             results.push(unsafe { Entry::decode(&self.entries[offset as usize..]) });
         }
         results
+    }
+}
+
+impl<'a> CompiledUnkDict<'a> {
+    pub unsafe fn decode(bs: &'a [u8]) -> Self {
+        let ptr = bs.as_ptr() as *const u32;
+        let ind_len = *ptr;
+        let ptr = ptr.offset(1) as *const u32;
+        let indices = ::std::slice::from_raw_parts(ptr, ind_len as usize);
+        let ptr = ptr.offset(ind_len as isize);
+        let counts_len = *ptr;
+        let ptr = ptr.offset(1) as *const u32;
+        let counts = ::std::slice::from_raw_parts(ptr, counts_len as usize);
+        let ptr = ptr.offset(counts_len as isize);
+        let entry_offsets_len = *ptr;
+        let ptr = ptr.offset(1) as *const u32;
+        let entry_offsets = ::std::slice::from_raw_parts(ptr, entry_offsets_len as usize);
+        let ptr = ptr.offset(entry_offsets_len as isize);
+        let entries_len = *ptr;
+        let ptr = ptr.offset(1) as *const u8;
+        let entries = ::std::slice::from_raw_parts(ptr, entries_len as usize);
+        let ptr = ptr.offset(entries_len as isize);
+        let ptr_diff = ptr as usize - bs.as_ptr() as usize;
+        let bs = &bs[ptr_diff..];
+        let categories = CompiledCharTable::decode(bs);
+
+        CompiledUnkDict {
+            indices: indices,
+            counts: counts,
+            entry_offsets: entry_offsets,
+            entries: entries,
+            categories: categories,
+        }
     }
 }
