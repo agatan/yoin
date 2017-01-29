@@ -1,70 +1,68 @@
 use std::io::{self, Write};
+use std::collections::HashMap;
 
 use byteorder::{ByteOrder, WriteBytesExt, NativeEndian};
 
-pub type Category = u8;
-const DEFAULT_CATEGORY: Category = 0;
+pub type CategoryId = u8;
 
-pub trait CharCategory {
-    fn char_category(&self, ch: char) -> Category;
-    fn invoke(&self, c: Category) -> bool;
-    fn group(&self, c: Category) -> bool;
-    fn length(&self, c: Category) -> u8;
+#[derive(Debug, Clone, Copy)]
+pub struct Category {
+    pub invoke: bool,
+    pub group: bool,
+    pub length: u8,
+}
+
+pub trait CharCategorize {
+    fn categorize(&self, ch: char) -> Category;
 }
 
 pub struct CharTable {
-    pub invokes: Vec<bool>,
-    pub groups: Vec<bool>,
-    pub lengths: Vec<u8>,
-    pub table: [Category; ::std::u16::MAX as usize],
+    pub default_id: CategoryId,
+    pub categories: Vec<Category>,
+    pub table: [CategoryId; ::std::u16::MAX as usize],
 }
 
 impl CharTable {
-    pub fn new() -> CharTable {
+    pub fn new(default_id: CategoryId, categories: Vec<Category>) -> CharTable {
         CharTable {
-            invokes: Vec::new(),
-            groups: Vec::new(),
-            lengths: Vec::new(),
-            table: [0; ::std::u16::MAX as usize],
+            default_id: default_id,
+            categories: categories,
+            table: [default_id; ::std::u16::MAX as usize],
+        }
+    }
+
+    pub fn set(&mut self, ch: usize, id: CategoryId) {
+        if ch < self.table.len() {
+            self.table[ch] = id;
         }
     }
 }
 
-impl CharCategory for CharTable {
-    fn char_category(&self, ch: char) -> Category {
+impl CharCategorize for CharTable {
+    fn categorize(&self, ch: char) -> Category {
         let ch = ch as u32;
-        if ch < ::std::u16::MAX as u32 {
+        let id = if ch < ::std::u16::MAX as u32 {
             self.table[ch as usize]
         } else {
-            DEFAULT_CATEGORY
-        }
-    }
-
-    fn invoke(&self, c: Category) -> bool {
-        self.invokes[c as usize]
-    }
-
-    fn group(&self, c: Category) -> bool {
-        self.groups[c as usize]
-    }
-
-    fn length(&self, c: Category) -> u8 {
-        self.lengths[c as usize]
+            self.default_id
+        };
+        self.categories[id as usize]
     }
 }
 
 impl CharTable {
     pub fn encode<W: Write>(&self, mut w: W) -> io::Result<()> {
-        let n = self.invokes.len() as u8;
+        let n = self.categories.len() as u8;
         w.write_u8(n)?;
-        for &b in self.invokes.iter() {
-            w.write_u8(b as u8)?;
+        w.write_u8(self.default_id)?;
+        for c in self.categories.iter() {
+            w.write_u8(c.invoke as u8)?;
         }
-        for &b in self.groups.iter() {
-            w.write_u8(b as u8)?;
+        for c in self.categories.iter() {
+            w.write_u8(c.group as u8)?;
         }
-        for &b in self.lengths.iter() {
-            w.write_u8(b)?;
+        for c in self.categories.iter() {
+            w.write_u8(c.length as u8)?;
         }
         for &b in self.table.iter() {
             w.write_u8(b)?;
@@ -79,32 +77,26 @@ impl CharTable {
 
 pub struct CompiledCharTable<'a> {
     pub n_categories: u8,
+    pub default_id: u8,
     pub invokes: &'a [u8],
     pub groups: &'a [u8],
     pub lengths: &'a [u8],
-    pub table: &'a [Category],
+    pub table: &'a [CategoryId],
 }
 
-impl<'a> CharCategory for CompiledCharTable<'a> {
-    fn char_category(&self, ch: char) -> Category {
+impl<'a> CharCategorize for CompiledCharTable<'a> {
+    fn categorize(&self, ch: char) -> Category {
         let ch = ch as u32;
-        if ch < ::std::u16::MAX as u32 {
+        let id = if ch < ::std::u16::MAX as u32 {
             self.table[ch as usize]
         } else {
-            DEFAULT_CATEGORY
+            self.default_id
+        } as usize;
+        Category {
+            invoke: self.invokes[id] != 0,
+            group: self.groups[id] != 0,
+            length: self.lengths[id],
         }
-    }
-
-    fn invoke(&self, c: Category) -> bool {
-        self.invokes[c as usize] != 0
-    }
-
-    fn group(&self, c: Category) -> bool {
-        self.groups[c as usize] != 0
-    }
-
-    fn length(&self, c: Category) -> u8 {
-        self.lengths[c as usize]
     }
 }
 
@@ -112,7 +104,8 @@ impl<'a> CompiledCharTable<'a> {
     pub unsafe fn decode(bs: &'a [u8]) -> Self {
         let ptr = bs.as_ptr() as *const u8;
         let n = *ptr;
-        let ptr = ptr.offset(1);
+        let default_id = *ptr.offset(1);
+        let ptr = ptr.offset(2);
         let invokes = ::std::slice::from_raw_parts(ptr, n as usize);
         let ptr = ptr.offset(n as isize);
         let groups = ::std::slice::from_raw_parts(ptr, n as usize);
@@ -122,6 +115,7 @@ impl<'a> CompiledCharTable<'a> {
         let table = ::std::slice::from_raw_parts(ptr, ::std::u16::MAX as usize);
         CompiledCharTable {
             n_categories: n,
+            default_id: default_id,
             invokes: invokes,
             groups: groups,
             lengths: lengths,
@@ -201,8 +195,8 @@ impl<'a> Entry<'a> {
     }
 }
 
-pub trait UnknownDict: CharCategory {
-    fn fetch_entries<'a>(&'a self, cate: Category) -> Vec<Entry<'a>>;
+pub trait UnknownDict: CharCategorize {
+    fn fetch_entries<'a>(&'a self, cate: CategoryId) -> Vec<Entry<'a>>;
 }
 
 pub struct UnkDict {
@@ -213,26 +207,14 @@ pub struct UnkDict {
     pub categories: CharTable,
 }
 
-impl CharCategory for UnkDict {
-    fn char_category(&self, ch: char) -> Category {
-        self.categories.char_category(ch)
-    }
-
-    fn invoke(&self, cate: Category) -> bool {
-        self.categories.invoke(cate)
-    }
-
-    fn group(&self, cate: Category) -> bool {
-        self.categories.group(cate)
-    }
-
-    fn length(&self, cate: Category) -> u8 {
-        self.categories.length(cate)
+impl CharCategorize for UnkDict {
+    fn categorize(&self, ch: char) -> Category {
+        self.categories.categorize(ch)
     }
 }
 
 impl UnknownDict for UnkDict {
-    fn fetch_entries<'a>(&'a self, cate: Category) -> Vec<Entry<'a>> {
+    fn fetch_entries<'a>(&'a self, cate: CategoryId) -> Vec<Entry<'a>> {
         let count = self.counts[cate as usize] as usize;
         let index = self.indices[cate as usize] as usize;
         let offsets = &self.entry_offsets[index..index + count];
@@ -245,6 +227,34 @@ impl UnknownDict for UnkDict {
 }
 
 impl UnkDict {
+    pub fn build<'a>(entries: HashMap<CategoryId, Vec<Entry<'a>>>,
+                     char_table: CharTable)
+                     -> Self {
+        let n_cates = entries.len();
+        let mut indices = vec![0; n_cates];
+        let mut counts = vec![0; n_cates];
+        let mut offsets = Vec::new();
+        let mut entry_buf = Vec::new();
+        let mut index = 0;
+        for (id, entries) in entries {
+            indices[id as usize] = index;
+            counts[id as usize] = entries.len() as u32;
+            for entry in entries {
+                let offset = entry_buf.len() as u32 - 1;
+                offsets.push(offset);
+                index += 1;
+                entry.encode_native(&mut entry_buf).unwrap();
+            }
+        }
+        UnkDict {
+            indices: indices,
+            counts: counts,
+            entry_offsets: offsets,
+            entries: entry_buf,
+            categories: char_table,
+        }
+    }
+
     pub fn encode<W: Write, O: ByteOrder>(&self, mut w: W) -> io::Result<()> {
         w.write_u32::<O>(self.indices.len() as u32)?;
         for i in &self.indices {
@@ -278,26 +288,14 @@ pub struct CompiledUnkDict<'a> {
     categories: CompiledCharTable<'a>,
 }
 
-impl<'a> CharCategory for CompiledUnkDict<'a> {
-    fn char_category(&self, ch: char) -> Category {
-        self.categories.char_category(ch)
-    }
-
-    fn invoke(&self, cate: Category) -> bool {
-        self.categories.invoke(cate)
-    }
-
-    fn group(&self, cate: Category) -> bool {
-        self.categories.group(cate)
-    }
-
-    fn length(&self, cate: Category) -> u8 {
-        self.categories.length(cate)
+impl<'a> CharCategorize for CompiledUnkDict<'a> {
+    fn categorize(&self, ch: char) -> Category {
+        self.categories.categorize(ch)
     }
 }
 
 impl<'a> UnknownDict for CompiledUnkDict<'a> {
-    fn fetch_entries<'b>(&'b self, cate: Category) -> Vec<Entry<'b>> {
+    fn fetch_entries<'b>(&'b self, cate: CategoryId) -> Vec<Entry<'b>> {
         let count = self.counts[cate as usize] as usize;
         let index = self.indices[cate as usize] as usize;
         let offsets = &self.entry_offsets[index..index + count];

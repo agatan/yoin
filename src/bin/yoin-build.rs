@@ -17,7 +17,7 @@ extern crate yoin;
 
 use yoin::dict::fst::Fst;
 use yoin::dict::{Morph, Matrix};
-use yoin::dict::unknown::{CharTable, UnkDict, Entry};
+use yoin::dict::unknown::{CategoryId, Category, CharTable, UnkDict, Entry};
 
 #[derive(Debug)]
 enum Error {
@@ -103,49 +103,105 @@ fn read_matrix<P: AsRef<Path>>(path: P) -> Result<Matrix<Vec<i16>>, Error> {
     Ok(matrix)
 }
 
-fn build_unknown_dic<P: AsRef<Path>>(dicdir: P) -> Result<UnkDict, Error> {
-    let mut category_table: HashMap<String, (u8, bool, bool, u8)> = HashMap::new();
-    let mut buf = String::new();
-    File::open(dicdir.as_ref().join("char.def"))?.read_to_string(&mut buf)?;
-    let mut t = CharTable::new();
-    for line in buf.lines() {
-        let line = line.trim();
-        if line.starts_with('#') {
+fn build_chardef(contents: &str) -> Result<(CharTable, HashMap<String, CategoryId>), Error> {
+    let lines =
+        contents.lines().filter(|s| !s.is_empty() && !s.starts_with('#')).collect::<Vec<_>>();
+    let mut table = HashMap::new();
+    let mut cates = Vec::new();
+    let mut default = None;
+
+    let mut i = 0;
+    while !lines[i].starts_with("0x") {
+        let cols = lines[i]
+            .trim()
+            .split(|c: char| c == '\t' || c == ' ')
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>();
+        i += 1;
+        if cols.len() < 4 {
             continue;
         }
-        let cols: Vec<_> =
-                line.split(|c: char| c == '\t' || c == ' ').filter(|s| !s.is_empty()).collect();
-        if line.starts_with("0x") {
-            // character range...
-            if cols.len() < 2 {
-                continue;
-            }
-            let range = cols[0].split("..").collect::<Vec<_>>();
-            let cate = cols[1];
-            let cate_id = category_table[cate].0;
-            if range.len() == 1 {
-                let c = u32::from_str_radix(&range[0][2..], 16).map_err(|_| Error::InvalidChardef)?;
-                t.table[c as usize] = cate_id;
-            } else {
-                let start = u32::from_str_radix(&range[0][2..], 16).map_err(|_| Error::InvalidChardef)?;
-                let end = u32::from_str_radix(&range[1][2..], 16).map_err(|_| Error::InvalidChardef)?;
-                for i in start..end {
-                    t.table[i as usize] = cate_id;
-                }
-            }
-        } else {
-            if cols.len() < 4 {
-                continue;
-            }
-            let name = cols[0];
-            let invoke = cols[1] == "1";
-            let group = cols[2] == "1";
-            let length = cols[3].parse::<u8>().map_err(|_| Error::InvalidChardef)?;
-            let id = category_table.len() as u8;
-            category_table.insert(name.to_string(), (id, invoke, group, length));
+        let name = cols[0];
+        let invoke = cols[1] == "1";
+        let group = cols[2] == "1";
+        let length = cols[3].parse::<u8>().map_err(|_| Error::InvalidChardef)?;
+        let cate = Category {
+            invoke: invoke,
+            group: group,
+            length: length,
+        };
+        let id = cates.len() as u8;
+        table.insert(name.to_string(), id);
+        cates.push(cate);
+        if name == "DEFAULT" {
+            default = Some(id);
         }
     }
-    Err(Error::InvalidMorph)
+    let mut char_table = match default {
+        None => return Err(Error::InvalidChardef),
+        Some(id) => CharTable::new(id, cates),
+    };
+
+    for line in &lines[i..] {
+        let cols = line.trim()
+            .split(|c: char| c == '\t' || c == ' ')
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>();
+        // character range...
+        if cols.len() < 2 {
+            continue;
+        }
+        let range = cols[0].split("..").collect::<Vec<_>>();
+        let cate = cols[1];
+        let cate_id = table[cate];
+        if range.len() == 1 {
+            let c = u32::from_str_radix(&range[0][2..], 16).map_err(|_| Error::InvalidChardef)?;
+            char_table.set(c as usize, cate_id);
+        } else {
+            let start = u32::from_str_radix(&range[0][2..], 16).map_err(|_| Error::InvalidChardef)?;
+            let end = u32::from_str_radix(&range[1][2..], 16).map_err(|_| Error::InvalidChardef)?;
+            for c in start..end {
+                char_table.set(c as usize, cate_id);
+            }
+        }
+    }
+
+    Ok((char_table, table))
+}
+
+fn build_unknown_dic<P: AsRef<Path>>(dicdir: P) -> Result<UnkDict, Error> {
+    let (char_table, cate_table) = {
+        let mut buf = Vec::new();
+        File::open(dicdir.as_ref().join("char.def"))?.read_to_end(&mut buf)?;
+        let contents = EUC_JP.decode(&buf, DecoderTrap::Strict)
+            .map_err(|_| Error::InvalidEncode)?;
+        build_chardef(&contents)?
+    };
+
+    let mut contents = Vec::new();
+    File::open(dicdir.as_ref().join("unk.def"))?.read_to_end(&mut contents)?;
+    let contents = EUC_JP.decode(&contents, DecoderTrap::Strict).map_err(|_| Error::InvalidEncode)?;
+    let mut entries = HashMap::new();
+    for line in contents.lines() {
+        let cols = line.trim().splitn(5, ',').collect::<Vec<_>>();
+        if cols.len() != 5 {
+            return Err(Error::InvalidMorph);
+        }
+        let cate = cols[0];
+        let left_id = cols[1].parse::<u16>().map_err(|_| Error::InvalidMorph)?;
+        let right_id = cols[2].parse::<u16>().map_err(|_| Error::InvalidMorph)?;
+        let weight = cols[3].parse::<i16>().map_err(|_| Error::InvalidMorph)?;
+        let contents = cols[4];
+        let entry = Entry {
+            left_id: left_id,
+            right_id: right_id,
+            weight: weight,
+            contents: contents,
+        };
+        let id = cate_table[cate];
+        entries.entry(id).or_insert(Vec::new()).push(entry);
+    }
+    Ok(UnkDict::build(entries, char_table))
 }
 
 fn build() -> Result<(), Error> {
@@ -201,6 +257,11 @@ fn build() -> Result<(), Error> {
     println!("dumping...");
     let mut out = File::create(outdir.join("ipadic.matrix"))?;
     matrix.encode_native(&mut out)?;
+    println!("reading char.def and unk.def");
+    let unkdic = build_unknown_dic(&dict)?;
+    println!("dumping...");
+    let out = File::create(outdir.join("ipadic.unk"))?;
+    unkdic.encode_native(out)?;
     Ok(())
 }
 
