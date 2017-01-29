@@ -7,6 +7,7 @@ use std::path::Path;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
 use std::convert::From;
+use std::collections::HashMap;
 
 use clap::{App, Arg};
 use encoding::{Encoding, DecoderTrap};
@@ -16,6 +17,7 @@ extern crate yoin;
 
 use yoin::dict::fst::Fst;
 use yoin::dict::{Morph, Matrix};
+use yoin::dict::unknown::{CharTable, UnkDict, Entry};
 
 #[derive(Debug)]
 enum Error {
@@ -23,6 +25,7 @@ enum Error {
     IO(io::Error),
     InvalidEncode,
     InvalidMatrix,
+    InvalidChardef,
 }
 
 impl From<io::Error> for Error {
@@ -100,7 +103,52 @@ fn read_matrix<P: AsRef<Path>>(path: P) -> Result<Matrix<Vec<i16>>, Error> {
     Ok(matrix)
 }
 
-fn build() -> Result<(), Error>{
+fn build_unknown_dic<P: AsRef<Path>>(dicdir: P) -> Result<UnkDict, Error> {
+    let mut category_table: HashMap<String, (u8, bool, bool, u8)> = HashMap::new();
+    let mut buf = String::new();
+    File::open(dicdir.as_ref().join("char.def"))?.read_to_string(&mut buf)?;
+    let mut t = CharTable::new();
+    for line in buf.lines() {
+        let line = line.trim();
+        if line.starts_with('#') {
+            continue;
+        }
+        let cols: Vec<_> =
+                line.split(|c: char| c == '\t' || c == ' ').filter(|s| !s.is_empty()).collect();
+        if line.starts_with("0x") {
+            // character range...
+            if cols.len() < 2 {
+                continue;
+            }
+            let range = cols[0].split("..").collect::<Vec<_>>();
+            let cate = cols[1];
+            let cate_id = category_table[cate].0;
+            if range.len() == 1 {
+                let c = u32::from_str_radix(&range[0][2..], 16).map_err(|_| Error::InvalidChardef)?;
+                t.table[c as usize] = cate_id;
+            } else {
+                let start = u32::from_str_radix(&range[0][2..], 16).map_err(|_| Error::InvalidChardef)?;
+                let end = u32::from_str_radix(&range[1][2..], 16).map_err(|_| Error::InvalidChardef)?;
+                for i in start..end {
+                    t.table[i as usize] = cate_id;
+                }
+            }
+        } else {
+            if cols.len() < 4 {
+                continue;
+            }
+            let name = cols[0];
+            let invoke = cols[1] == "1";
+            let group = cols[2] == "1";
+            let length = cols[3].parse::<u8>().map_err(|_| Error::InvalidChardef)?;
+            let id = category_table.len() as u8;
+            category_table.insert(name.to_string(), (id, invoke, group, length));
+        }
+    }
+    Err(Error::InvalidMorph)
+}
+
+fn build() -> Result<(), Error> {
     let matches = App::new("yoin-build")
         .version("0.0.1")
         .arg(Arg::with_name("dict")
@@ -115,9 +163,7 @@ fn build() -> Result<(), Error>{
         .get_matches();
     let dict = match matches.value_of("dict") {
         Some(dict) => Path::new(dict),
-        None => {
-            unreachable!()
-        }
+        None => unreachable!(),
     };
     let outdir_name = match matches.value_of("outdir") {
         Some(dir) => dir,

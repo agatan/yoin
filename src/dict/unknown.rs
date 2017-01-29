@@ -19,6 +19,17 @@ pub struct CharTable {
     pub table: [Category; ::std::u16::MAX as usize],
 }
 
+impl CharTable {
+    pub fn new() -> CharTable {
+        CharTable {
+            invokes: Vec::new(),
+            groups: Vec::new(),
+            lengths: Vec::new(),
+            table: [0; ::std::u16::MAX as usize],
+        }
+    }
+}
+
 impl CharCategory for CharTable {
     fn char_category(&self, ch: char) -> Category {
         let ch = ch as u32;
