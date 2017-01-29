@@ -18,7 +18,7 @@ fn main() {
     }
 
     let la = Lattice::build(input.as_str(), &dict);
-    let out = la.output();
+    let out = la.into_output();
     for node in out {
         println!("{:?}", node);
     }
