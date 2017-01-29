@@ -1,6 +1,9 @@
 use std::iter::Iterator;
 use std::str::Split;
-use lattice::{Node, NodeKind};
+use std::marker::PhantomData;
+
+use lattice::{Lattice, Node, NodeKind};
+use dict::Dict;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token<'a> {
@@ -48,5 +51,25 @@ impl<'a> Iterator for FeatureIter<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
+    }
+}
+
+#[derive(Debug)]
+pub struct Tokenizer<'a, D: Dict<'a> + 'a> {
+    dic: D,
+    _mark: PhantomData<&'a D>,
+}
+
+impl<'a, D: Dict<'a> + 'a> Tokenizer<'a, D> {
+    pub fn new_with_dic(dic: D) -> Self {
+        Tokenizer {
+            dic: dic,
+            _mark: PhantomData,
+        }
+    }
+
+    pub fn tokenize(&'a self, input: &'a str) -> Vec<Token<'a>> {
+        let la = Lattice::build(input, &self.dic);
+        la.into_output().into_iter().map(|node| Token::new(node)).collect()
     }
 }

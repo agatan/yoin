@@ -5,21 +5,12 @@ use std::env;
 
 extern crate yoin;
 
-use yoin::dict::Dict;
 use yoin::ipadic;
-use yoin::lattice::Lattice;
 
 fn main() {
-    let dict = ipadic::dictionary();
     let input = env::args().nth(1).unwrap();
-    let morphs = dict.lookup_str(input.as_str());
-    for morph in &morphs {
-        println!("{}", morph);
-    }
-
-    let la = Lattice::build(input.as_str(), &dict);
-    let out = la.into_output();
-    for node in out {
+    let tokenizer = ipadic::tokenizer();
+    for node in tokenizer.tokenize(input.as_str()) {
         println!("{:?}", node);
     }
 }

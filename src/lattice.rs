@@ -164,6 +164,11 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
             let mut path = Vec::new();
             let mut p = ps[0];
             debug_assert!(self.arena.get(p).kind == NodeKind::EOS);
+            // skip EOS node.
+            match self.prev_table.get(&p) {
+                Some(&prev) => p = prev,
+                None => return Vec::new(),
+            }
             while let Some(prev) = self.prev_table.get(&p).cloned() {
                 path.push(p);
                 p = prev;
