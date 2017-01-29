@@ -10,7 +10,7 @@ pub use self::morph::Morph;
 pub mod fst;
 use self::fst::Fst;
 
-mod chardef;
+pub mod unknown;
 
 pub trait Dict<'a> {
     type Iterator: Iterator<Item=Morph<&'a str>>;
