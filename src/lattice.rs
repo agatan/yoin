@@ -36,8 +36,8 @@ type NodeId = usize;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Node<'a> {
-    start: usize,
-    kind: NodeKind<'a>,
+    pub start: usize,
+    pub kind: NodeKind<'a>,
 }
 
 impl<'a> Node<'a> {
