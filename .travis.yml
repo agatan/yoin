@@ -6,4 +6,4 @@ rust:
 script:
     - cargo build --verbose
     - cargo test --verbose
-    - cargo bench --verbose
+    - (cargo --version | grep nightly) && cargo bench
