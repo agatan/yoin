@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 
 use dict::{Dict, Morph};
-use dict::unknown::UnknownDict;
+use dict::unknown::{UnknownDict, Entry};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum NodeKind<'a> {
     BOS,
     EOS,
     Known(Morph<&'a str>),
+    Unkown(&'a str, Entry<'a>),
 }
 
 impl<'a> NodeKind<'a> {
@@ -15,6 +16,7 @@ impl<'a> NodeKind<'a> {
         match *self {
             NodeKind::BOS | NodeKind::EOS => 0,
             NodeKind::Known(ref morph) => morph.left_id,
+            NodeKind::Unkown(_, ref e) => e.left_id,
         }
     }
 
@@ -22,6 +24,7 @@ impl<'a> NodeKind<'a> {
         match *self {
             NodeKind::BOS | NodeKind::EOS => 0,
             NodeKind::Known(ref morph) => morph.right_id,
+            NodeKind::Unkown(_, ref e) => e.right_id,
         }
     }
 
@@ -29,6 +32,7 @@ impl<'a> NodeKind<'a> {
         match *self {
             NodeKind::BOS | NodeKind::EOS => 0,
             NodeKind::Known(ref morph) => morph.weight,
+            NodeKind::Unkown(_, ref e) => e.weight,
         }
     }
 }
@@ -47,6 +51,7 @@ impl<'a> Node<'a> {
             NodeKind::BOS => 0,
             NodeKind::EOS => 1,
             NodeKind::Known(ref m) => m.surface.chars().count(),
+            NodeKind::Unkown(s, _) => s.chars().count(),
         }
     }
 }
@@ -144,8 +149,49 @@ impl<'a, D: Dict<'a> + 'a, Unk: UnknownDict + 'a> Lattice<'a, D, Unk> {
         let mut input_chars = input.chars();
 
         while !input_chars.as_str().is_empty() {
+            let mut is_matched = false;
             for m in dic.lookup_str_iter(input_chars.as_str()) {
+                is_matched = true;
                 la.add(NodeKind::Known(m));
+            }
+            let ch = input_chars.clone().next().unwrap();
+            let category = unk_dic.categorize(ch);
+            let cid = unk_dic.category_id(ch);
+            let input_str = input_chars.as_str();
+            if !is_matched || category.invoke {
+                // if no morphs found or character category requires to invoke unknown search
+                let mut end = ch.len_utf8();
+                let mut word_len = 1;
+                if category.group {
+                    while end < input_str.len() {
+                        let c = match input_str[end..].chars().next() {
+                            None => break,
+                            Some(ch) => ch,
+                        };
+                        if cid != unk_dic.category_id(c) {
+                            break;
+                        }
+                        end += c.len_utf8();
+                        word_len += 1;
+                        const MAX_UNKOWN_WORD_LEN: usize = 1024;
+                        if word_len > MAX_UNKOWN_WORD_LEN {
+                            break;
+                        }
+                    }
+                }
+                let mut p = 0;
+                let mut cloned_chars =  input_chars.clone();
+                let entries = unk_dic.fetch_entries(cid);
+                for _ in 0..word_len {
+                    match cloned_chars.next() {
+                        None => break,
+                        Some(c) => p += c.len_utf8(),
+                    }
+                    let surface = &(input_chars.as_str())[..p];
+                    for e in entries.iter() {
+                        la.add(NodeKind::Unkown(surface, e.clone()));
+                    }
+                }
             }
             let cnt = la.forward();
             for _ in 0..cnt {
