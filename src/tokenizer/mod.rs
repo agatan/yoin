@@ -3,7 +3,8 @@ use std::str::Split;
 use std::marker::PhantomData;
 use std::fmt;
 
-use lattice::{Lattice, Node, NodeKind};
+mod lattice;
+use self::lattice::{Lattice, Node, NodeKind};
 use dict::Dict;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
