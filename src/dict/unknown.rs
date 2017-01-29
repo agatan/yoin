@@ -362,7 +362,8 @@ impl<'a> UnknownDict for CompiledUnkDict<'a> {
         let offsets = &self.entry_offsets[index..index + count];
         let mut results = Vec::with_capacity(count);
         for &offset in offsets {
-            results.push(unsafe { Entry::decode(&self.entries[offset as usize..]) });
+            let e = unsafe { Entry::decode(&self.entries[offset as usize..]) };
+            results.push(e);
         }
         results
     }
@@ -399,4 +400,31 @@ impl<'a> CompiledUnkDict<'a> {
             categories: categories,
         }
     }
+}
+
+#[test]
+fn test_unk_dic_encode() {
+    let stub_char_table = CharTable::new(0, Vec::new());
+    let mut entries = HashMap::new();
+    let es = vec!["a", "b"]
+        .into_iter()
+        .map(|s| {
+            Entry {
+                left_id: 0,
+                right_id: 1,
+                weight: -1,
+                contents: s,
+            }
+        })
+        .collect::<Vec<_>>();
+    entries.insert(0, es.clone());
+    entries.insert(1, es.clone());
+    entries.insert(2, es.clone());
+    let dic = UnkDict::build(entries, stub_char_table);
+    let mut buf = Vec::new();
+    dic.encode_native(&mut buf).unwrap();
+    let compiled = unsafe { CompiledUnkDict::decode(&buf) };
+    assert_eq!(dic.fetch_entries(0), compiled.fetch_entries(0));
+    assert_eq!(dic.fetch_entries(1), compiled.fetch_entries(1));
+    assert_eq!(dic.fetch_entries(2), compiled.fetch_entries(2));
 }

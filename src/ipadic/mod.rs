@@ -19,22 +19,33 @@ pub fn unkown_dic() -> CompiledUnkDict<'static> {
     unsafe { CompiledUnkDict::decode(UNKOWN) }
 }
 
-pub fn tokenizer() -> Tokenizer<'static, FstDict<&'static [u8], &'static [i16]>, CompiledUnkDict<'static>> {
+pub fn tokenizer
+    ()
+    -> Tokenizer<'static, FstDict<&'static [u8], &'static [i16]>, CompiledUnkDict<'static>>
+{
     Tokenizer::new_with_dic(dictionary(), unkown_dic())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dict::unknown::{UnknownDict, CharCategorize};
+    use dict::unknown::{UnknownDict, CharCategorize, Category};
 
     #[test]
     fn test_unknown_dic() {
         let dic = unkown_dic();
-        let cate = dic.category_id('ビ');
-        for e in dic.fetch_entries(cate) {
-            println!("{:?}", e);
+        let cate = dic.categorize('ビ');
+        assert_eq!(cate,
+                   Category {
+                       invoke: true,
+                       group: true,
+                       length: 2,
+                   });
+        let id = dic.category_id('ビ');
+        for e in dic.fetch_entries(id) {
+            assert!(e.contents.contains("名詞") || e.contents.contains("感動詞"),
+                    "KATAKANA entry should be either '名詞' or '感動詞', got: {:?}",
+                    e);
         }
-        panic!()
     }
 }
