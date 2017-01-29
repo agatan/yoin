@@ -1,6 +1,7 @@
 use std::iter::Iterator;
 use std::str::Split;
 use std::marker::PhantomData;
+use std::fmt;
 
 use lattice::{Lattice, Node, NodeKind};
 use dict::Dict;
@@ -41,6 +42,12 @@ impl<'a> Token<'a> {
 
     pub fn features(&self) -> FeatureIter {
         FeatureIter(self.contents.split(','))
+    }
+}
+
+impl<'a> fmt::Display for Token<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}\t{}", self.surface, self.contents)
     }
 }
 
