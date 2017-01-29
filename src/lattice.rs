@@ -41,13 +41,6 @@ pub struct Node<'a> {
 }
 
 impl<'a> Node<'a> {
-    pub fn surface(&self) -> &'a str {
-        match self.kind {
-            NodeKind::BOS | NodeKind::EOS => "",
-            NodeKind::Known(ref m) => m.surface,
-        }
-    }
-
     fn surface_len(&self) -> usize {
         match self.kind {
             NodeKind::BOS => 0,
@@ -178,11 +171,6 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
         } else {
             Vec::new()
         }
-    }
-
-    pub fn output(&self) -> Vec<&Node<'a>> {
-        let path = self.rev_output_path();
-        path.into_iter().rev().map(|id| self.arena.get(id)).collect()
     }
 
     pub fn into_output(self) -> Vec<Node<'a>> {
