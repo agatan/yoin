@@ -4,28 +4,29 @@ use dict::{Dict, Morph};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NodeKind<'a> {
-    BosEos,
+    BOS,
+    EOS,
     Known(Morph<&'a str>),
 }
 
 impl<'a> NodeKind<'a> {
     fn left_id(&self) -> u16 {
         match *self {
-            NodeKind::BosEos => 0,
+            NodeKind::BOS | NodeKind::EOS => 0,
             NodeKind::Known(ref morph) => morph.left_id,
         }
     }
 
     fn right_id(&self) -> u16 {
         match *self {
-            NodeKind::BosEos => 0,
+            NodeKind::BOS | NodeKind::EOS => 0,
             NodeKind::Known(ref morph) => morph.right_id,
         }
     }
 
     fn weight(&self) -> i16 {
         match *self {
-            NodeKind::BosEos => 0,
+            NodeKind::BOS | NodeKind::EOS => 0,
             NodeKind::Known(ref morph) => morph.weight,
         }
     }
@@ -42,14 +43,15 @@ pub struct Node<'a> {
 impl<'a> Node<'a> {
     pub fn surface(&self) -> &'a str {
         match self.kind {
-            NodeKind::BosEos => "",
+            NodeKind::BOS | NodeKind::EOS => "",
             NodeKind::Known(ref m) => m.surface,
         }
     }
 
     fn surface_len(&self) -> usize {
         match self.kind {
-            NodeKind::BosEos => 1,
+            NodeKind::BOS => 0,
+            NodeKind::EOS => 1,
             NodeKind::Known(ref m) => m.surface.chars().count(),
         }
     }
@@ -93,7 +95,7 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
         let mut end_nodes = vec![Vec::new(); char_size + 2];
         let bos = arena.add(Node {
             start: 0,
-            kind: NodeKind::BosEos,
+            kind: NodeKind::BOS,
         });
         end_nodes[0].push(bos);
         let mut cost_table = HashMap::new();
@@ -138,7 +140,7 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
     }
 
     fn end(&mut self) {
-        self.add(NodeKind::BosEos);
+        self.add(NodeKind::EOS);
     }
 
     pub fn build(input: &'a str, dic: &'a D) -> Self {
@@ -161,12 +163,12 @@ impl<'a, D: Dict<'a> + 'a> Lattice<'a, D> {
         if let Some(ref ps) = self.end_nodes.last() {
             let mut path = Vec::new();
             let mut p = ps[0];
-            debug_assert!(self.arena.get(p).kind == NodeKind::BosEos);
+            debug_assert!(self.arena.get(p).kind == NodeKind::EOS);
             while let Some(prev) = self.prev_table.get(&p).cloned() {
                 path.push(p);
                 p = prev;
             }
-            debug_assert!(self.arena.get(p).kind == NodeKind::BosEos);
+            debug_assert!(self.arena.get(p).kind == NodeKind::BOS);
             path
         } else {
             Vec::new()
