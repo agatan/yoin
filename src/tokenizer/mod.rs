@@ -18,15 +18,16 @@ pub struct Token<'a> {
 impl<'a> Token<'a> {
     fn new(node: Node<'a>) -> Self {
         let Node { start, kind } = node;
-        let morph = match kind {
+        let (surface, contents) = match kind {
             NodeKind::BOS | NodeKind::EOS => unreachable!(),
-            NodeKind::Known(morph) => morph,
+            NodeKind::Known(morph) => (morph.surface, morph.contents),
+            NodeKind::Unkown(surface, entry) => (surface, entry.contents),
         };
 
         Token {
             start: start,
-            surface: morph.surface,
-            contents: morph.contents,
+            surface: surface,
+            contents: contents,
         }
     }
 
