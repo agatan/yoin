@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use byteorder::WriteBytesExt;
+use byteorder::{ByteOrder, WriteBytesExt, NativeEndian};
 
 pub type Category = u8;
 const DEFAULT_CATEGORY: Category = 0;
@@ -149,3 +149,48 @@ fn test_encode_decode() {
         assert_eq!(compiled.length(category), l);
     }
 }
+
+#[derive(Debug)]
+pub struct Entry<'a> {
+    pub left_id: u16,
+    pub right_id: u16,
+    pub weight: i16,
+    pub contents: &'a str,
+}
+
+impl<'a> Entry<'a> {
+    pub fn encode<W: Write, O: ByteOrder>(&self, mut w: W) -> io::Result<()> {
+        w.write_u16::<O>(self.left_id)?;
+        w.write_u16::<O>(self.right_id)?;
+        w.write_i16::<O>(self.weight)?;
+        w.write_u32::<O>(self.contents.len() as u32)?;
+        for &b in self.contents.as_bytes() {
+            w.write_u8(b)?;
+        }
+        Ok(())
+    }
+
+    pub fn encode_native<W: Write>(&self, w: W) -> io::Result<()> {
+        self.encode::<_, NativeEndian>(w)
+    }
+
+    pub unsafe fn decode(bs: &'a [u8]) -> Self {
+        let ptr = bs.as_ptr() as *const u16;
+        let left_id = *ptr;
+        let right_id = *ptr.offset(1);
+        let ptr = ptr.offset(2) as *const i16;
+        let weight = *ptr;
+        let ptr = ptr.offset(1) as *const u32;
+        let len = *ptr;
+        let ptr = ptr.offset(1) as *const u8;
+        let buf = ::std::slice::from_raw_parts(ptr, len as usize);
+        let contents = ::std::str::from_utf8_unchecked(buf);
+        Entry {
+            left_id: left_id,
+            right_id: right_id,
+            weight: weight,
+            contents: contents,
+        }
+    }
+}
+
