@@ -1,6 +1,7 @@
 use std::io;
 use std::fmt;
 use std::error::Error as StdError;
+use std::convert::From;
 
 #[derive(Debug)]
 pub enum Error {
@@ -28,10 +29,16 @@ impl StdError for Error {
         "dictionary build error"
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&StdError> {
         match *self {
             Error::IO(ref err) => Some(err),
             _ => None,
         }
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Error {
+        Error::IO(err)
     }
 }
