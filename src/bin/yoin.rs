@@ -11,6 +11,7 @@ fn main() {
     let input = env::args().nth(1).unwrap();
     let tokenizer = ipadic::tokenizer();
     for node in tokenizer.tokenize(input.as_str()) {
-        println!("{:?}", node);
+        println!("{}", node);
     }
+    println!("EOS");
 }
