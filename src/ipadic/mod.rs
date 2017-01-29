@@ -22,3 +22,19 @@ pub fn unkown_dic() -> CompiledUnkDict<'static> {
 pub fn tokenizer() -> Tokenizer<'static, FstDict<&'static [u8], &'static [i16]>, CompiledUnkDict<'static>> {
     Tokenizer::new_with_dic(dictionary(), unkown_dic())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dict::unknown::{UnknownDict, CharCategorize};
+
+    #[test]
+    fn test_unknown_dic() {
+        let dic = unkown_dic();
+        let cate = dic.category_id('ビ');
+        for e in dic.fetch_entries(cate) {
+            println!("{:?}", e);
+        }
+        panic!()
+    }
+}
