@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use byteorder::{NativeEndian, WriteBytesExt, ByteOrder};
+use byteorder::WriteBytesExt;
 
 pub type Category = u8;
 const DEFAULT_CATEGORY: Category = 0;
