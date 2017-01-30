@@ -32,9 +32,7 @@ You can execute `yoin` command, or use `yoin` as a library.
 
 ## Usage - CLI
 
-Currently, `yoin` has no options. :(
-
-`yoin` just reads lines from stdin, analyzes each line, and outputs results.
+By default, `yoin` reads lines from stdin, analyzes each line, and outputs results.
 
 ```sh
 :) $ yoin
@@ -55,6 +53,22 @@ EOS
 に	助詞,格助詞,一般,*,*,*,に,ニ,ニ
 なっ	動詞,自立,*,*,五段・ラ行,連用タ接続,なる,ナッ,ナッ
 た	助動詞,*,*,*,特殊・タ,基本形,た,タ,タ
+EOS
+```
+
+Or, reads from file.
+
+```sh
+:) $ cat input.txt
+すもももももももものうち
+:) $ yoin --file input.txt
+すもも	名詞,一般,*,*,*,*,すもも,スモモ,スモモ
+も	助詞,係助詞,*,*,*,*,も,モ,モ
+もも	名詞,一般,*,*,*,*,もも,モモ,モモ
+も	助詞,係助詞,*,*,*,*,も,モ,モ
+もも	名詞,一般,*,*,*,*,もも,モモ,モモ
+の	助詞,連体化,*,*,*,*,の,ノ,ノ
+うち	名詞,非自立,副詞可能,*,*,*,うち,ウチ,ウチ
 EOS
 ```
 
