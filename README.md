@@ -1,6 +1,6 @@
 ## Yoin - A Japanese Morphological Analyzer
 
-**This is still under development...**
+*This is still under development...*
 
 [![Build Status](https://travis-ci.org/agatan/yoin.svg?branch=master)](https://travis-ci.org/agatan/yoin)
 
@@ -32,7 +32,8 @@ You can execute `yoin` command, or use `yoin` as a library.
 
 ## Usage - CLI
 
-Currently, `yoin` has no option...
+Currently, `yoin` has no options. :(
+
 `yoin` just reads lines from stdin, analyzes each line, and outputs results.
 
 ```sh
