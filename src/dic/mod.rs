@@ -24,29 +24,25 @@ pub trait Dic<'a> {
     fn lookup_str(&'a self, input: &'a str) -> Vec<Morph<&'a str>> {
         self.lookup_str_iter(input).collect()
     }
-
-    fn connection_cost(&self, right_id: u16, left_id: u16) -> i16;
 }
 
 #[derive(Debug, Clone)]
-pub struct FstDic<T: AsRef<[u8]>, U: AsRef<[i16]>> {
+pub struct FstDic<T: AsRef<[u8]>> {
     morph_bytes: T,
     fst: Fst<T>,
-    matrix: Matrix<U>,
 }
 
-impl<'a> FstDic<&'a [u8], &'a [i16]> {
-    pub unsafe fn from_bytes(bytecodes: &'a [u8], morph_bytes: &'a [u8], matrix: &'a [u8]) -> Self {
+impl<'a> FstDic<&'a [u8]> {
+    pub unsafe fn from_bytes(bytecodes: &'a [u8], morph_bytes: &'a [u8]) -> Self {
         FstDic {
             morph_bytes: morph_bytes,
             fst: Fst::from_bytes(bytecodes),
-            matrix: Matrix::decode(matrix),
         }
     }
 }
 
-impl <U: AsRef<[i16]>> FstDic<Vec<u8>, U> {
-    pub fn build<S: AsRef<str>>(morphs: &[Morph<S>], matrix: Matrix<U>) -> Self {
+impl  FstDic<Vec<u8>> {
+    pub fn build<S: AsRef<str>>(morphs: &[Morph<S>]) -> Self {
         let mut morph_bytes = Vec::new();
         let mut fst_inputs = Vec::new();
         for morph in morphs {
@@ -60,12 +56,11 @@ impl <U: AsRef<[i16]>> FstDic<Vec<u8>, U> {
         FstDic {
             morph_bytes: morph_bytes,
             fst: fst,
-            matrix: matrix,
         }
     }
 }
 
-impl<'a, T: AsRef<[u8]>, U: AsRef<[i16]>> Dic<'a> for FstDic<T, U> {
+impl<'a, T: AsRef<[u8]>> Dic<'a> for FstDic<T> {
     type Iterator = Iter<'a>;
 
     fn lookup_iter(&'a self, input: &'a [u8]) -> Iter<'a> {
@@ -73,10 +68,6 @@ impl<'a, T: AsRef<[u8]>, U: AsRef<[i16]>> Dic<'a> for FstDic<T, U> {
             morph_bytes: self.morph_bytes.as_ref(),
             iter: self.fst.run_iter(input),
         }
-    }
-
-    fn connection_cost(&self, left_id: u16, right_id: u16) -> i16 {
-        self.matrix[(left_id, right_id)]
     }
 }
 
@@ -134,8 +125,7 @@ mod tests {
                               weight: 4,
                               contents: "contents 4",
                           }];
-        let matrix = Matrix::with_zeros(0, 0);
-        let dict = FstDic::build(&morphs, matrix);
+        let dict = FstDic::build(&morphs);
         let results = dict.lookup_str("すもも");
         assert_eq!(results.len(), morphs.len());
         // the order of lookup results is not fixed.
