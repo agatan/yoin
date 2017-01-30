@@ -207,7 +207,12 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
                     for _ in 0..category.length {
                         match cloned_chars.next() {
                             None => break,
-                            Some(c) => p += c.len_utf8(),
+                            Some(c) => {
+                                if unk_dic.category_id(c) != cid {
+                                    break;
+                                }
+                                p += c.len_utf8();
+                            }
                         }
                         let surface = &(input_chars.as_str())[..p];
                         for e in entries.iter() {
