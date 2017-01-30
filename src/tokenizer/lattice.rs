@@ -255,10 +255,6 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
         writeln!(w, "digraph lattice {{")?;
         writeln!(w, "\trankdir=LR;")?;
         writeln!(w, "\tnode [shape=circle]")?;
-        for (id, node) in self.arena.0.iter().enumerate() {
-            if self.prev_table.iter().any(|&p| p == id) {
-            }
-        }
         for (id, &prev_id) in self.prev_table.iter().enumerate() {
             if prev_id != DUMMY_PREV_NODE {
                 writeln!(w, "\t\"{}\"[label=\"{}\"];", id, self.arena.get(id).surface())?;
