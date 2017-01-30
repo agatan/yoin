@@ -2,10 +2,11 @@ use std::iter::Iterator;
 use std::str::Split;
 use std::marker::PhantomData;
 use std::fmt;
+use std::convert::AsRef;
 
 mod lattice;
 use self::lattice::{Lattice, Node, NodeKind};
-use dic::Dic;
+use dic::{Dic, Matrix};
 use dic::unknown::UnknownDic;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -65,23 +66,25 @@ impl<'a> Iterator for FeatureIter<'a> {
 }
 
 #[derive(Debug)]
-pub struct Tokenizer<'a, D: Dic<'a> + 'a, Unk: UnknownDic> {
+pub struct Tokenizer<'a, D: Dic<'a> + 'a, Unk: UnknownDic, T: AsRef<[i16]>> {
     dic: D,
     unk_dic: Unk,
+    matrix: Matrix<T>,
     _mark: PhantomData<&'a D>,
 }
 
-impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic> Tokenizer<'a, D, Unk> {
-    pub fn new_with_dic(dic: D, unk_dic: Unk) -> Self {
+impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic, T: AsRef<[i16]>> Tokenizer<'a, D, Unk, T> {
+    pub fn new_with_dic(dic: D, unk_dic: Unk, matrix: Matrix<T>) -> Self {
         Tokenizer {
             dic: dic,
             unk_dic: unk_dic,
+            matrix: matrix,
             _mark: PhantomData,
         }
     }
 
     pub fn tokenize(&'a self, input: &'a str) -> Vec<Token<'a>> {
-        let la = Lattice::build(input, &self.dic, &self.unk_dic);
+        let la = Lattice::build(input, &self.dic, &self.unk_dic, &self.matrix);
         la.into_output().into_iter().map(|node| Token::new(node)).collect()
     }
 }

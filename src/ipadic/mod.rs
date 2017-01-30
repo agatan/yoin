@@ -7,8 +7,8 @@ pub const MORPHS: &'static [u8] = include_bytes!("../../data/ipadic.morph");
 pub const MATRIX: &'static [u8] = include_bytes!("../../data/ipadic.matrix");
 pub const UNKOWN: &'static [u8] = include_bytes!("../../data/ipadic.unk");
 
-pub fn dictionary() -> FstDic<&'static [u8], &'static [i16]> {
-    unsafe { FstDic::from_bytes(BYTECODE, MORPHS, MATRIX) }
+pub fn dictionary() -> FstDic<&'static [u8]> {
+    unsafe { FstDic::from_bytes(BYTECODE, MORPHS) }
 }
 
 pub fn matrix() -> Matrix<&'static [i16]> {
@@ -19,11 +19,8 @@ pub fn unkown_dic() -> CompiledUnkDic<'static> {
     unsafe { CompiledUnkDic::decode(UNKOWN) }
 }
 
-pub fn tokenizer
-    ()
-    -> Tokenizer<'static, FstDic<&'static [u8], &'static [i16]>, CompiledUnkDic<'static>>
-{
-    Tokenizer::new_with_dic(dictionary(), unkown_dic())
+pub fn tokenizer() -> Tokenizer<'static, FstDic<&'static [u8]>, CompiledUnkDic<'static>, &'static [i16]> {
+    Tokenizer::new_with_dic(dictionary(), unkown_dic(), matrix())
 }
 
 #[cfg(test)]

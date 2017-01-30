@@ -34,6 +34,10 @@ impl<T: AsRef<[i16]>> Matrix<T> {
     pub fn encode_native<W: Write>(&self, w: W) -> io::Result<()> {
         self.encode::<W, NativeEndian>(w)
     }
+
+    pub fn connection_cost(&self, right_id: u16, left_id: u16) -> i16 {
+        self[(right_id, left_id)]
+    }
 }
 
 impl<'a> Matrix<&'a [i16]> {
