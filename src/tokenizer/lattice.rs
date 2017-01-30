@@ -174,10 +174,12 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
             let category = unk_dic.categorize(ch);
             let cid = unk_dic.category_id(ch);
             let input_str = input_chars.as_str();
+
+            // if no morphs found or character category requires to invoke unknown search
             if !is_matched || category.invoke {
-                // if no morphs found or character category requires to invoke unknown search
                 let mut end = ch.len_utf8();
                 let mut word_len = 1;
+                let entries = unk_dic.fetch_entries(cid);
                 if category.group {
                     while end < input_str.len() {
                         let c = match input_str[end..].chars().next() {
@@ -194,18 +196,23 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
                             break;
                         }
                     }
-                }
-                let mut p = 0;
-                let mut cloned_chars = input_chars.clone();
-                let entries = unk_dic.fetch_entries(cid);
-                for _ in 0..word_len {
-                    match cloned_chars.next() {
-                        None => break,
-                        Some(c) => p += c.len_utf8(),
-                    }
-                    let surface = &(input_chars.as_str())[..p];
+                    let surface = &input_str[..end];
                     for e in entries.iter() {
                         la.add(byte_pos, NodeKind::Unkown(surface, e.clone()));
+                    }
+                }
+                if category.length > 0 {
+                    let mut p = 0;
+                    let mut cloned_chars = input_chars.clone();
+                    for _ in 0..category.length {
+                        match cloned_chars.next() {
+                            None => break,
+                            Some(c) => p += c.len_utf8(),
+                        }
+                        let surface = &(input_chars.as_str())[..p];
+                        for e in entries.iter() {
+                            la.add(byte_pos, NodeKind::Unkown(surface, e.clone()));
+                        }
                     }
                 }
             }
