@@ -23,6 +23,7 @@ fn read_and_analyze_lines<R: io::BufRead>(r: R) -> io::Result<()> {
 
 fn main() {
     let matches = App::new("yoin")
+        .version(yoin::VERSION)
         .about("Japanese Morphological Analyzer")
         .arg(Arg::with_name("file")
             .long("file")

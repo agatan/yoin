@@ -5,3 +5,5 @@ pub mod sysdic;
 #[cfg(feature = "ipadic")]
 pub mod ipadic;
 pub mod tokenizer;
+
+pub const VERSION: &'static str = "0.0.1";
