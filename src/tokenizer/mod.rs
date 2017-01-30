@@ -5,8 +5,8 @@ use std::fmt;
 
 mod lattice;
 use self::lattice::{Lattice, Node, NodeKind};
-use dict::Dict;
-use dict::unknown::UnknownDict;
+use dict::Dic;
+use dict::unknown::UnknownDic;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token<'a> {
@@ -65,13 +65,13 @@ impl<'a> Iterator for FeatureIter<'a> {
 }
 
 #[derive(Debug)]
-pub struct Tokenizer<'a, D: Dict<'a> + 'a, Unk: UnknownDict> {
+pub struct Tokenizer<'a, D: Dic<'a> + 'a, Unk: UnknownDic> {
     dic: D,
     unk_dic: Unk,
     _mark: PhantomData<&'a D>,
 }
 
-impl<'a, D: Dict<'a> + 'a, Unk: UnknownDict> Tokenizer<'a, D, Unk> {
+impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic> Tokenizer<'a, D, Unk> {
     pub fn new_with_dic(dic: D, unk_dic: Unk) -> Self {
         Tokenizer {
             dic: dic,

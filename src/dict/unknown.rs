@@ -228,11 +228,11 @@ fn test_entry_encode() {
     assert_eq!(actual, e);
 }
 
-pub trait UnknownDict: CharCategorize {
+pub trait UnknownDic: CharCategorize {
     fn fetch_entries<'a>(&'a self, cate: CategoryId) -> Vec<Entry<'a>>;
 }
 
-pub struct UnkDict {
+pub struct UnkDic {
     pub indices: Vec<u32>, // Category -> Index of initial entry
     pub counts: Vec<u32>, // Category -> Counts of entries
     pub entry_offsets: Vec<u32>,
@@ -240,7 +240,7 @@ pub struct UnkDict {
     pub categories: CharTable,
 }
 
-impl CharCategorize for UnkDict {
+impl CharCategorize for UnkDic {
     fn categorize(&self, ch: char) -> Category {
         self.categories.categorize(ch)
     }
@@ -250,7 +250,7 @@ impl CharCategorize for UnkDict {
     }
 }
 
-impl UnknownDict for UnkDict {
+impl UnknownDic for UnkDic {
     fn fetch_entries<'a>(&'a self, cate: CategoryId) -> Vec<Entry<'a>> {
         let count = self.counts[cate as usize] as usize;
         let index = self.indices[cate as usize] as usize;
@@ -263,7 +263,7 @@ impl UnknownDict for UnkDict {
     }
 }
 
-impl UnkDict {
+impl UnkDic {
     pub fn build<'a>(entries: HashMap<CategoryId, Vec<Entry<'a>>>, char_table: CharTable) -> Self {
         let n_cates = entries.len();
         let mut indices = vec![0; n_cates];
@@ -281,7 +281,7 @@ impl UnkDict {
                 entry.encode_native(&mut entry_buf).unwrap();
             }
         }
-        UnkDict {
+        UnkDic {
             indices: indices,
             counts: counts,
             entry_offsets: offsets,
@@ -332,12 +332,12 @@ fn test_unk_dic() {
         .collect::<Vec<_>>();
     entries.insert(0, es.clone());
     entries.insert(1, es.clone());
-    let dic = UnkDict::build(entries, stub_char_table);
+    let dic = UnkDic::build(entries, stub_char_table);
     assert_eq!(dic.fetch_entries(0), es);
     assert_eq!(dic.fetch_entries(1), es);
 }
 
-pub struct CompiledUnkDict<'a> {
+pub struct CompiledUnkDic<'a> {
     indices: &'a [u32],
     counts: &'a [u32],
     entry_offsets: &'a [u32],
@@ -345,7 +345,7 @@ pub struct CompiledUnkDict<'a> {
     categories: CompiledCharTable<'a>,
 }
 
-impl<'a> CharCategorize for CompiledUnkDict<'a> {
+impl<'a> CharCategorize for CompiledUnkDic<'a> {
     fn categorize(&self, ch: char) -> Category {
         self.categories.categorize(ch)
     }
@@ -355,7 +355,7 @@ impl<'a> CharCategorize for CompiledUnkDict<'a> {
     }
 }
 
-impl<'a> UnknownDict for CompiledUnkDict<'a> {
+impl<'a> UnknownDic for CompiledUnkDic<'a> {
     fn fetch_entries<'b>(&'b self, cate: CategoryId) -> Vec<Entry<'b>> {
         let count = self.counts[cate as usize] as usize;
         let index = self.indices[cate as usize] as usize;
@@ -369,7 +369,7 @@ impl<'a> UnknownDict for CompiledUnkDict<'a> {
     }
 }
 
-impl<'a> CompiledUnkDict<'a> {
+impl<'a> CompiledUnkDic<'a> {
     pub unsafe fn decode(bs: &'a [u8]) -> Self {
         let ptr = bs.as_ptr() as *const u32;
         let ind_len = *ptr;
@@ -392,7 +392,7 @@ impl<'a> CompiledUnkDict<'a> {
         let bs = &bs[ptr_diff..];
         let categories = CompiledCharTable::decode(bs);
 
-        CompiledUnkDict {
+        CompiledUnkDic {
             indices: indices,
             counts: counts,
             entry_offsets: entry_offsets,
@@ -420,10 +420,10 @@ fn test_unk_dic_encode() {
     entries.insert(0, es.clone());
     entries.insert(1, es.clone());
     entries.insert(2, es.clone());
-    let dic = UnkDict::build(entries, stub_char_table);
+    let dic = UnkDic::build(entries, stub_char_table);
     let mut buf = Vec::new();
     dic.encode_native(&mut buf).unwrap();
-    let compiled = unsafe { CompiledUnkDict::decode(&buf) };
+    let compiled = unsafe { CompiledUnkDic::decode(&buf) };
     assert_eq!(dic.fetch_entries(0), compiled.fetch_entries(0));
     assert_eq!(dic.fetch_entries(1), compiled.fetch_entries(1));
     assert_eq!(dic.fetch_entries(2), compiled.fetch_entries(2));
