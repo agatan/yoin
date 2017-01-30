@@ -6,13 +6,15 @@
 //! use yoin::ipadic;
 //!
 //! let input = "すもももももももものうち";
-//! let expected = vec!["すもも", "も", "もも", "も", "もも", "の", "うち"];
 //!
 //! let tokenizer = ipadic::tokenizer();
-//! let tokens = tokenizer.tokenize(input);
 //!
-//! for (tok, e) in tokens.iter().zip(expected) {
-//!     assert_eq!(tok.surface(), e);
+//! for token in tokenizer.tokenize(input) {
+//!     println!("{}", token.surface());
+//!     println!("{}", &input[token.start()..token.end()]);
+//!     for feature in token.features() {
+//!         println!("{}", feature);
+//!     }
 //! }
 //! ```
 extern crate byteorder;

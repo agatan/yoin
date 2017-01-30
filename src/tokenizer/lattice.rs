@@ -123,8 +123,7 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
         }
     }
 
-    fn add(&mut self, kind: NodeKind<'a>) {
-        let start = self.pointer;
+    fn add(&mut self, start: usize, kind: NodeKind<'a>) {
         let id = self.arena.add(Node {
             start: start,
             kind: kind,
@@ -157,18 +156,19 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
     }
 
     fn end(&mut self) {
-        self.add(NodeKind::EOS);
+        self.add(!0, NodeKind::EOS);
     }
 
     pub fn build(input: &'a str, dic: &'a D, unk_dic: &'a Unk, matrix: &'a Matrix<T>) -> Self {
         let mut la = Lattice::new(input.chars().count(), dic, unk_dic, matrix);
         let mut input_chars = input.chars();
+        let mut byte_pos = 0;
 
         while !input_chars.as_str().is_empty() {
             let mut is_matched = false;
             for m in dic.lookup_str_iter(input_chars.as_str()) {
                 is_matched = true;
-                la.add(NodeKind::Known(m));
+                la.add(byte_pos, NodeKind::Known(m));
             }
             let ch = input_chars.clone().next().unwrap();
             let category = unk_dic.categorize(ch);
@@ -205,13 +205,15 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
                     }
                     let surface = &(input_chars.as_str())[..p];
                     for e in entries.iter() {
-                        la.add(NodeKind::Unkown(surface, e.clone()));
+                        la.add(byte_pos, NodeKind::Unkown(surface, e.clone()));
                     }
                 }
             }
             let cnt = la.forward();
             for _ in 0..cnt {
-                input_chars.next();
+                if let Some(c) = input_chars.next() {
+                    byte_pos += c.len_utf8();
+                }
             }
         }
 
