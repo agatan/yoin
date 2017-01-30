@@ -21,7 +21,7 @@ pub fn unkown_dic() -> CompiledUnkDic<'static> {
 }
 
 pub fn tokenizer() -> Tokenizer {
-    let sysdic=  SysDic {
+    let sysdic = SysDic {
         dic: dictionary(),
         matrix: matrix(),
         unknown_dic: unkown_dic(),
@@ -49,6 +49,20 @@ mod tests {
             assert!(e.contents.contains("名詞") || e.contents.contains("感動詞"),
                     "KATAKANA entry should be either '名詞' or '感動詞', got: {:?}",
                     e);
+        }
+    }
+
+    #[test]
+    fn test_tokenize() {
+        let input = "すもももももももものうち";
+        let expected = vec!["すもも", "も", "もも", "も", "もも", "の", "うち"];
+
+        let tokenizer = tokenizer();
+        let tokens = tokenizer.tokenize(input);
+
+        for (tok, e) in tokens.iter().zip(expected) {
+            assert_eq!(tok.surface(), e);
+            assert_eq!(&input[tok.start()..tok.end()], e);
         }
     }
 }
