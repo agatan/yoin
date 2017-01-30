@@ -23,12 +23,29 @@ EOS
 
 ## Build & Install
 
+*`yoin` is unavailable on [crates.io](https://crates.io), because dictionary data is too big...*
+
+### CLI
+
 ```sh
 :) $ git clone https://github.com/agatan/yoin
 :) $ cd yoin && cargo install
 ```
 
-You can execute `yoin` command, or use `yoin` as a library.
+### Library
+
+yoin can be included in your Cargo project like this:
+
+```toml
+[dependencies]
+yoin = { git = "https://github.com/agatan/yoin" }
+```
+
+and write your code like this:
+
+```rust
+extern crate yoin;
+```
 
 ## Usage - CLI
 
