@@ -160,7 +160,7 @@ fn build_chardef(contents: &str) -> Result<(CharTable, HashMap<String, CategoryI
         } else {
             let start = u32::from_str_radix(&range[0][2..], 16).map_err(|_| Error::InvalidChardef)?;
             let end = u32::from_str_radix(&range[1][2..], 16).map_err(|_| Error::InvalidChardef)?;
-            for c in start..end {
+            for c in start..(end+1) {
                 char_table.set(c as usize, cate_id);
             }
         }
