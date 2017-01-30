@@ -140,7 +140,6 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
                 node.kind.weight() as i64;
             let total_cost = self.cost_table[enode_id] + cost;
             if total_cost < self.cost_table[id] {
-                self.cost_table.insert(id, total_cost);
                 self.cost_table[id] = total_cost;
                 self.prev_table[id] = enode_id;
             }
@@ -230,7 +229,7 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
             if p == DUMMY_PREV_NODE {
                 return Vec::new();
             }
-            while p != 0 && p != DUMMY_PREV_NODE {
+            while p != 0 {
                 path.push(p);
                 p = self.prev_table[p];
             }
