@@ -4,7 +4,7 @@ extern crate test;
 use test::Bencher;
 
 extern crate yoin;
-use yoin::dict::Dic;
+use yoin::dic::Dic;
 use yoin::ipadic;
 
 #[bench]

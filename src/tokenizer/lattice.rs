@@ -1,5 +1,5 @@
-use dict::{Dic, Morph};
-use dict::unknown::{UnknownDic, Entry};
+use dic::{Dic, Morph};
+use dic::unknown::{UnknownDic, Entry};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum NodeKind<'a> {
