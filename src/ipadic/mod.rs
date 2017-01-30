@@ -1,5 +1,6 @@
 use dic::{FstDic, Matrix};
 use dic::unknown::CompiledUnkDic;
+use sysdic::SysDic;
 use tokenizer::Tokenizer;
 
 pub const BYTECODE: &'static [u8] = include_bytes!("../../data/ipadic.dic");
@@ -19,8 +20,13 @@ pub fn unkown_dic() -> CompiledUnkDic<'static> {
     unsafe { CompiledUnkDic::decode(UNKOWN) }
 }
 
-pub fn tokenizer() -> Tokenizer<'static, FstDic<&'static [u8]>, CompiledUnkDic<'static>, &'static [i16]> {
-    Tokenizer::new_with_dic(dictionary(), unkown_dic(), matrix())
+pub fn tokenizer() -> Tokenizer {
+    let sysdic=  SysDic {
+        dic: dictionary(),
+        matrix: matrix(),
+        unknown_dic: unkown_dic(),
+    };
+    Tokenizer::new(sysdic)
 }
 
 #[cfg(test)]
