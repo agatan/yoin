@@ -23,3 +23,8 @@ ipadic = []
 name = "yoin"
 doc = false
 path = "src/bin/yoin.rs"
+
+[[bin]]
+name = "yoin-build"
+doc = false
+path = "src/bin/yoin-build.rs"
