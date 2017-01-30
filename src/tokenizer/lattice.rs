@@ -125,8 +125,9 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
 
         for &enode_id in &self.end_nodes[self.pointer] {
             let enode = self.arena.get(enode_id);
-            let cost = self.matrix.connection_cost(enode.kind.right_id(), node.kind.left_id()) as i64 +
-                       node.kind.weight() as i64;
+            let cost =
+                self.matrix.connection_cost(enode.kind.right_id(), node.kind.left_id()) as i64 +
+                node.kind.weight() as i64;
             let total_cost = self.cost_table[enode_id] + cost;
             if total_cost < self.cost_table[id] {
                 self.cost_table.insert(id, total_cost);
@@ -186,7 +187,7 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
                     }
                 }
                 let mut p = 0;
-                let mut cloned_chars =  input_chars.clone();
+                let mut cloned_chars = input_chars.clone();
                 let entries = unk_dic.fetch_entries(cid);
                 for _ in 0..word_len {
                     match cloned_chars.next() {
