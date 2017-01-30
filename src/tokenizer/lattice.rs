@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use dict::{Dic, Morph};
 use dict::unknown::{UnknownDic, Entry};
 
@@ -75,14 +73,16 @@ impl<'a> NodeArena<'a> {
     }
 }
 
+const DUMMY_PREV_NODE: NodeId = !0;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Lattice<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a> {
     dic: &'a D,
     unk_dic: &'a Unk,
     arena: NodeArena<'a>,
     end_nodes: Vec<Vec<NodeId>>,
-    prev_table: HashMap<NodeId, NodeId>,
-    cost_table: HashMap<NodeId, i64>,
+    prev_table: Vec<NodeId>,
+    cost_table: Vec<i64>,
     pointer: usize,
 }
 
@@ -98,15 +98,13 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a> Lattice<'a, D, Unk> {
             kind: NodeKind::BOS,
         });
         end_nodes[0].push(bos);
-        let mut cost_table = HashMap::new();
-        cost_table.insert(bos, 0);
         Lattice {
             dic: dic,
             unk_dic: unk_dic,
             arena: arena,
             end_nodes: end_nodes,
-            prev_table: HashMap::new(),
-            cost_table: cost_table,
+            prev_table: vec![0],
+            cost_table: vec![0],
             pointer: 0,
         }
     }
@@ -118,14 +116,18 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a> Lattice<'a, D, Unk> {
             kind: kind,
         });
         let node = self.arena.get(id);
+        self.prev_table.push(DUMMY_PREV_NODE);
+        self.cost_table.push(MAX_COST);
+
         for &enode_id in &self.end_nodes[self.pointer] {
             let enode = self.arena.get(enode_id);
             let cost = self.dic.connection_cost(enode.kind.right_id(), node.kind.left_id()) as i64 +
                        node.kind.weight() as i64;
-            let total_cost = self.min_cost(enode_id) + cost;
-            if total_cost < self.min_cost(id) {
+            let total_cost = self.cost_table[enode_id] + cost;
+            if total_cost < self.cost_table[id] {
                 self.cost_table.insert(id, total_cost);
-                self.prev_table.insert(id, enode_id);
+                self.cost_table[id] = total_cost;
+                self.prev_table[id] = enode_id;
             }
         }
         self.end_nodes[self.pointer + node.surface_len()].push(id);
@@ -209,13 +211,13 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a> Lattice<'a, D, Unk> {
             let mut p = ps[0];
             debug_assert!(self.arena.get(p).kind == NodeKind::EOS);
             // skip EOS node.
-            match self.prev_table.get(&p) {
-                Some(&prev) => p = prev,
-                None => return Vec::new(),
+            p = self.prev_table[p];
+            if p == DUMMY_PREV_NODE {
+                return Vec::new();
             }
-            while let Some(prev) = self.prev_table.get(&p).cloned() {
+            while p != 0 && p != DUMMY_PREV_NODE {
                 path.push(p);
-                p = prev;
+                p = self.prev_table[p];
             }
             debug_assert!(self.arena.get(p).kind == NodeKind::BOS);
             path
@@ -233,12 +235,5 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a> Lattice<'a, D, Unk> {
         }
         results.reverse();
         results
-    }
-
-    fn min_cost(&self, id: NodeId) -> i64 {
-        match self.cost_table.get(&id) {
-            Some(&cost) => cost,
-            None => MAX_COST,
-        }
     }
 }
