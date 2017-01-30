@@ -1,6 +1,7 @@
 use std::iter::Iterator;
 use std::str::Split;
 use std::fmt;
+use std::io::{self, Write};
 
 mod lattice;
 use self::lattice::{Lattice, Node, NodeKind};
@@ -69,6 +70,10 @@ pub struct Tokenizer {
 impl Tokenizer {
     pub fn new(sysdic: SysDic) -> Self {
         Tokenizer { sysdic: sysdic }
+    }
+
+    pub fn dump_lattice<'a, W: Write>(&'a self, input: &'a str, w: W) -> io::Result<()> {
+        Lattice::build(input, &self.sysdic.dic, &self.sysdic.unknown_dic, &self.sysdic.matrix).dump_dot(w)
     }
 
     pub fn tokenize<'a>(&'a self, input: &'a str) -> Vec<Token<'a>> {

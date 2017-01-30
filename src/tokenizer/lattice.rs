@@ -1,4 +1,5 @@
 use std::convert::AsRef;
+use std::io::{self, Write};
 
 use dic::{Dic, Morph, Matrix};
 use dic::unknown::{UnknownDic, Entry};
@@ -46,6 +47,15 @@ pub struct Node<'a> {
 }
 
 impl<'a> Node<'a> {
+    fn surface(&self) -> &str {
+        match self.kind {
+            NodeKind::BOS => "BOS",
+            NodeKind::EOS => "EOS",
+            NodeKind::Known(ref m) => m.surface,
+            NodeKind::Unkown(surface, _) => surface,
+        }
+    }
+
     fn surface_len(&self) -> usize {
         match self.kind {
             NodeKind::BOS => 0,
@@ -240,5 +250,24 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
         }
         results.reverse();
         results
+    }
+
+    pub fn dump_dot<W: Write>(&self, mut w: W) -> io::Result<()> {
+        writeln!(w, "digraph lattice {{")?;
+        writeln!(w, "\trankdir=LR;")?;
+        writeln!(w, "\tnode [shape=circle]")?;
+        for (id, node) in self.arena.0.iter().enumerate() {
+            if self.prev_table.iter().any(|&p| p == id) {
+            }
+        }
+        for (id, &prev_id) in self.prev_table.iter().enumerate() {
+            if prev_id != DUMMY_PREV_NODE {
+                writeln!(w, "\t\"{}\"[label=\"{}\"];", id, self.arena.get(id).surface())?;
+                let prev_node = self.arena.get(prev_id);
+                writeln!(w, "\t\"{}\"[label=\"{}\"];", prev_id, prev_node.surface())?;
+                writeln!(w, "\t\"{}\" -> \"{}\";", prev_id, id)?;
+            }
+        }
+        writeln!(w, "}}")
     }
 }
