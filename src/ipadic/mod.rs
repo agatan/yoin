@@ -1,5 +1,5 @@
-use dict::{FstDic, Matrix};
-use dict::unknown::CompiledUnkDic;
+use dic::{FstDic, Matrix};
+use dic::unknown::CompiledUnkDic;
 use tokenizer::Tokenizer;
 
 pub const BYTECODE: &'static [u8] = include_bytes!("../../data/ipadic.dic");
@@ -29,7 +29,7 @@ pub fn tokenizer
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dict::unknown::{UnknownDic, CharCategorize, Category};
+    use dic::unknown::{UnknownDic, CharCategorize, Category};
 
     #[test]
     fn test_unknown_dic() {

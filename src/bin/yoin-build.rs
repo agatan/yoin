@@ -15,9 +15,9 @@ use encoding::all::EUC_JP;
 
 extern crate yoin;
 
-use yoin::dict::fst::Fst;
-use yoin::dict::{Morph, Matrix};
-use yoin::dict::unknown::{CategoryId, Category, CharTable, UnkDic, Entry};
+use yoin::dic::fst::Fst;
+use yoin::dic::{Morph, Matrix};
+use yoin::dic::unknown::{CategoryId, Category, CharTable, UnkDic, Entry};
 
 #[derive(Debug)]
 enum Error {

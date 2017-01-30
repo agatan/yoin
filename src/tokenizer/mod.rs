@@ -5,8 +5,8 @@ use std::fmt;
 
 mod lattice;
 use self::lattice::{Lattice, Node, NodeKind};
-use dict::Dic;
-use dict::unknown::UnknownDic;
+use dic::Dic;
+use dic::unknown::UnknownDic;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token<'a> {
