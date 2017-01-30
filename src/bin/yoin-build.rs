@@ -17,7 +17,7 @@ extern crate yoin;
 
 use yoin::dict::fst::Fst;
 use yoin::dict::{Morph, Matrix};
-use yoin::dict::unknown::{CategoryId, Category, CharTable, UnkDict, Entry};
+use yoin::dict::unknown::{CategoryId, Category, CharTable, UnkDic, Entry};
 
 #[derive(Debug)]
 enum Error {
@@ -169,7 +169,7 @@ fn build_chardef(contents: &str) -> Result<(CharTable, HashMap<String, CategoryI
     Ok((char_table, table))
 }
 
-fn build_unknown_dic<P: AsRef<Path>>(dicdir: P) -> Result<UnkDict, Error> {
+fn build_unknown_dic<P: AsRef<Path>>(dicdir: P) -> Result<UnkDic, Error> {
     let (char_table, cate_table) = {
         let mut buf = Vec::new();
         File::open(dicdir.as_ref().join("char.def"))?.read_to_end(&mut buf)?;
@@ -201,7 +201,7 @@ fn build_unknown_dic<P: AsRef<Path>>(dicdir: P) -> Result<UnkDict, Error> {
         let id = cate_table[cate];
         entries.entry(id).or_insert(Vec::new()).push(entry);
     }
-    Ok(UnkDict::build(entries, char_table))
+    Ok(UnkDic::build(entries, char_table))
 }
 
 fn build() -> Result<(), Error> {

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use dict::{Dict, Morph};
-use dict::unknown::{UnknownDict, Entry};
+use dict::{Dic, Morph};
+use dict::unknown::{UnknownDic, Entry};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum NodeKind<'a> {
@@ -76,7 +76,7 @@ impl<'a> NodeArena<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Lattice<'a, D: Dict<'a> + 'a, Unk: UnknownDict + 'a> {
+pub struct Lattice<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a> {
     dic: &'a D,
     unk_dic: &'a Unk,
     arena: NodeArena<'a>,
@@ -89,7 +89,7 @@ pub struct Lattice<'a, D: Dict<'a> + 'a, Unk: UnknownDict + 'a> {
 /// care about overflow...
 const MAX_COST: i64 = ::std::i32::MAX as i64;
 
-impl<'a, D: Dict<'a> + 'a, Unk: UnknownDict + 'a> Lattice<'a, D, Unk> {
+impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a> Lattice<'a, D, Unk> {
     fn new(char_size: usize, dic: &'a D, unk_dic: &'a Unk) -> Self {
         let mut arena = NodeArena::new();
         let mut end_nodes = vec![Vec::new(); char_size + 2];
