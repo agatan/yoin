@@ -1,0 +1,9 @@
+[package]
+name = "yoin"
+version = "0.1.0"
+authors = ["agatan <agatan039@gmail.com>"]
+
+[dependencies]
+yoin-core = { path = "../yoin-core" }
+yoin-ipadic = { path = "../yoin-ipadic" }
+clap = "2.20"
