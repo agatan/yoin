@@ -1,8 +1,8 @@
 ## Yoin - A Japanese Morphological Analyzer
 
-*This is still under development...*
-
 [![Build Status](https://travis-ci.org/agatan/yoin.svg?branch=master)](https://travis-ci.org/agatan/yoin)
+
+*This is still under development...*
 
 `yoin` is a Japanese morphological analyze engine written in pure Rust.
 
