@@ -19,3 +19,7 @@ clap = "2.20"
 default = ["ipadic"]
 ipadic = []
 
+[[bin]]
+name = "yoin-build"
+doc = false
+path = "src/bin/yoin-build.rs"
