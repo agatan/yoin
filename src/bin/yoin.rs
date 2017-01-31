@@ -5,8 +5,9 @@ use std::fs::File;
 
 use clap::{Arg, App};
 
-extern crate yoin_core as core;
-extern crate yoin_ipadic as ipadic;
+extern crate yoin;
+
+use yoin::ipadic;
 
 fn read_and_analyze_lines<R: io::BufRead>(mut r: R, lattice: bool) -> io::Result<()> {
     let tokenizer = ipadic::tokenizer();
@@ -28,7 +29,7 @@ fn read_and_analyze_lines<R: io::BufRead>(mut r: R, lattice: bool) -> io::Result
 
 fn main() {
     let matches = App::new("yoin")
-        .version(core::VERSION)
+        .version(yoin::VERSION)
         .about("Japanese Morphological Analyzer")
         .arg(Arg::with_name("file")
             .long("file")

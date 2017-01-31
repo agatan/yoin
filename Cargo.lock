@@ -3,8 +3,8 @@ name = "yoin"
 version = "0.1.0"
 dependencies = [
  "clap 2.20.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "yoin-core 0.0.1",
- "yoin-ipadic 0.1.0",
+ "yoin-core 0.0.1 (git+https://github.com/agatan/yoin-core)",
+ "yoin-ipadic 0.1.0 (git+https://github.com/agatan/yoin-ipadic)",
 ]
 
 [[package]]
@@ -151,6 +151,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "yoin-core"
 version = "0.0.1"
+source = "git+https://github.com/agatan/yoin-core#c8b3670d75902935c659e25f25254eaaf1caa6a7"
 dependencies = [
  "byteorder 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.20.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -160,8 +161,9 @@ dependencies = [
 [[package]]
 name = "yoin-ipadic"
 version = "0.1.0"
+source = "git+https://github.com/agatan/yoin-ipadic#bb2314634aab809b343d515b1feef8dd35cd198b"
 dependencies = [
- "yoin-core 0.0.1",
+ "yoin-core 0.0.1 (git+https://github.com/agatan/yoin-core)",
 ]
 
 [metadata]
@@ -185,3 +187,5 @@ dependencies = [
 "checksum vec_map 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cac5efe5cb0fa14ec2f84f83c701c562ee63f6dcc680861b21d65c682adfb05f"
 "checksum winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "167dc9d6949a9b857f3451275e911c3f44255842c1f7a76f33c55103a909087a"
 "checksum winapi-build 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2d315eee3b34aca4797b2da6b13ed88266e6d612562a0c46390af8299fc699bc"
+"checksum yoin-core 0.0.1 (git+https://github.com/agatan/yoin-core)" = "<none>"
+"checksum yoin-ipadic 0.1.0 (git+https://github.com/agatan/yoin-ipadic)" = "<none>"
