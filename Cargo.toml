@@ -1,5 +1,5 @@
 [package]
-name = "yoin"
+name = "yoin-core"
 version = "0.0.1"
 authors = ["Naomichi Agata <agatan039@gmail.com>"]
 readme = "README.md"
@@ -19,12 +19,3 @@ clap = "2.20"
 default = ["ipadic"]
 ipadic = []
 
-[[bin]]
-name = "yoin"
-doc = false
-path = "src/bin/yoin.rs"
-
-[[bin]]
-name = "yoin-build"
-doc = false
-path = "src/bin/yoin-build.rs"
