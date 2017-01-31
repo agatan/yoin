@@ -1,0 +1,7 @@
+[package]
+name = "yoin-ipadic"
+version = "0.1.0"
+authors = ["agatan <agatan039@gmail.com>"]
+
+[dependencies]
+yoin-core = { git = "https://github.com/agatan/yoin-core" }
