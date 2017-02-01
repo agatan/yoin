@@ -1,9 +1,10 @@
 [package]
-name = "yoin-core"
+name = "yoin-build"
 version = "0.0.1"
 authors = ["Naomichi Agata <agatan039@gmail.com>"]
-readme = "README.md"
-license-file = "LICENSE"
 
 [dependencies]
 byteorder = "1.0.0"
+encoding = "0.2"
+clap = "2.20"
+yoin-core = { path = ".." }
