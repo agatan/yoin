@@ -1,8 +1,7 @@
 extern crate bzip2;
 extern crate tar;
 
-use std::io::prelude::*;
-use std::fs::{self, File};
+use std::fs::File;
 use std::path::Path;
 
 use bzip2::read::BzDecoder;
