@@ -11,6 +11,6 @@ This is under development.
 """
 
 [dependencies]
-yoin-core = { git = "https://github.com/agatan/yoin-core" }
-yoin-ipadic = { git = "https://github.com/agatan/yoin-ipadic"  }
+yoin-core = { path = "yoin-core" }
+yoin-ipadic = { path = "yoin-ipadic" }
 clap = "2.20"

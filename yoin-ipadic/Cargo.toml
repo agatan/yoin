@@ -6,7 +6,7 @@ build = "build.rs"
 license-file = "LICENSE"
 
 [dependencies]
-yoin-core = { git = "https://github.com/agatan/yoin-core" }
+yoin-core = { path = "../yoin-core" }
 
 [build-dependencies]
 bzip2 = "0.3"
