@@ -1,0 +1,13 @@
+[package]
+name = "yoin-ipadic"
+version = "0.0.1"
+authors = ["Naomichi Agata <agatan039@gmail.com>"]
+build = "build.rs"
+license-file = "LICENSE"
+
+[dependencies]
+yoin-core = { git = "https://github.com/agatan/yoin-core" }
+
+[build-dependencies]
+bzip2 = "0.3"
+tar = "0.4"
