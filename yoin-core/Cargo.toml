@@ -1,0 +1,9 @@
+[package]
+name = "yoin-core"
+version = "0.0.1"
+authors = ["Naomichi Agata <agatan039@gmail.com>"]
+readme = "README.md"
+license-file = "LICENSE"
+
+[dependencies]
+byteorder = "1.0.0"
