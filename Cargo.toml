@@ -2,6 +2,11 @@
 name = "yoin-ipadic"
 version = "0.1.0"
 authors = ["agatan <agatan039@gmail.com>"]
+build = "build.rs"
 
 [dependencies]
 yoin-core = { git = "https://github.com/agatan/yoin-core" }
+
+[build-dependencies]
+bzip2 = "0.3"
+tar = "0.4"
