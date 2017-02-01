@@ -5,4 +5,4 @@ pub mod dic;
 pub mod sysdic;
 pub mod tokenizer;
 
-pub const VERSION: &'static str = "0.0.1";
+pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
