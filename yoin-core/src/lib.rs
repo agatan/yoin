@@ -1,5 +1,6 @@
 //! A Japanese morphological analyzer written in pure Rust.
 extern crate byteorder;
+extern crate crossbeam;
 
 pub mod dic;
 pub mod sysdic;

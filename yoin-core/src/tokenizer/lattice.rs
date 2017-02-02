@@ -96,7 +96,6 @@ pub struct Lattice<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]> + 
     end_nodes: Vec<Vec<NodeId>>,
     prev_table: Vec<NodeId>,
     cost_table: Vec<i64>,
-    pointer: usize,
 }
 
 /// care about overflow...
@@ -119,13 +118,12 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
             end_nodes: end_nodes,
             prev_table: vec![0],
             cost_table: vec![0],
-            pointer: 0,
         }
     }
 
-    fn add(&mut self, start: usize, kind: NodeKind<'a>) {
+    fn add(&mut self, char_pos: usize, start_byte: usize, kind: NodeKind<'a>) {
         let id = self.arena.add(Node {
-            start: start,
+            start: start_byte,
             kind: kind,
         });
         let node = self.arena.get(id);
@@ -134,7 +132,7 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
         let mut node_prev = DUMMY_PREV_NODE;
         let mut node_cost = MAX_COST;
 
-        for &enode_id in &self.end_nodes[self.pointer] {
+        for &enode_id in &self.end_nodes[char_pos] {
             let enode = self.arena.get(enode_id);
             let cost = node_conn_row[enode.kind.right_id() as usize] as i64 + node_weight;
             let total_cost = self.cost_table[enode_id] + cost;
@@ -146,32 +144,33 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
 
         self.prev_table.push(node_prev);
         self.cost_table.push(node_cost);
-        self.end_nodes[self.pointer + node.surface_len()].push(id);
+        self.end_nodes[char_pos + node.surface_len()].push(id);
     }
 
-    fn forward(&mut self) -> usize {
-        let old = self.pointer;
-        self.pointer += 1;
-        while self.end_nodes[self.pointer].is_empty() {
-            self.pointer += 1;
+    fn next_char_pos(&mut self, mut char_pos: usize) -> usize {
+        char_pos += 1;
+        while self.end_nodes[char_pos].is_empty() {
+            char_pos += 1;
         }
-        self.pointer - old
+        char_pos
     }
 
     fn end(&mut self) {
-        self.add(!0, NodeKind::EOS);
+        let char_size = self.end_nodes.len() - 2;
+        self.add(char_size, !0, NodeKind::EOS);
     }
 
     pub fn build(input: &'a str, dic: &'a D, unk_dic: &'a Unk, matrix: &'a Matrix<T>) -> Self {
         let mut la = Lattice::new(input.chars().count(), dic, unk_dic, matrix);
         let mut input_chars = input.chars();
+        let mut char_pos = 0;
         let mut byte_pos = 0;
 
         while !input_chars.as_str().is_empty() {
             let mut is_matched = false;
             for m in dic.lookup_str_iter(input_chars.as_str()) {
                 is_matched = true;
-                la.add(byte_pos, NodeKind::Known(m));
+                la.add(char_pos, byte_pos, NodeKind::Known(m));
             }
             let ch = input_chars.clone().next().unwrap();
             let category = unk_dic.categorize(ch);
@@ -201,7 +200,7 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
                     }
                     let surface = &input_str[..end];
                     for e in entries.iter() {
-                        la.add(byte_pos, NodeKind::Unknown(surface, e.clone()));
+                        la.add(char_pos, byte_pos, NodeKind::Unknown(surface, e.clone()));
                     }
                 }
                 if category.length > 0 {
@@ -219,13 +218,14 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
                         }
                         let surface = &(input_chars.as_str())[..p];
                         for e in entries.iter() {
-                            la.add(byte_pos, NodeKind::Unknown(surface, e.clone()));
+                            la.add(char_pos, byte_pos, NodeKind::Unknown(surface, e.clone()));
                         }
                     }
                 }
             }
-            let cnt = la.forward();
-            for _ in 0..cnt {
+            let old_char_pos = char_pos;
+            char_pos = la.next_char_pos(char_pos);
+            for _ in 0..(char_pos - old_char_pos) {
                 if let Some(c) = input_chars.next() {
                     byte_pos += c.len_utf8();
                 }
