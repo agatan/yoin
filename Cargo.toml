@@ -14,3 +14,6 @@ This is under development.
 yoin-core = { path = "yoin-core" }
 yoin-ipadic = { path = "yoin-ipadic" }
 clap = "2.20"
+
+[profile.release]
+debug = true
