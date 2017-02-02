@@ -1,5 +1,6 @@
 use std::io::{self, Write};
 use std::collections::HashMap;
+use std::marker::Sync;
 
 use byteorder::{ByteOrder, WriteBytesExt, NativeEndian};
 
@@ -228,7 +229,7 @@ fn test_entry_encode() {
     assert_eq!(actual, e);
 }
 
-pub trait UnknownDic: CharCategorize {
+pub trait UnknownDic: CharCategorize + Sync {
     fn fetch_entries<'a>(&'a self, cate: CategoryId) -> Vec<Entry<'a>>;
 }
 

@@ -1,5 +1,6 @@
 use std::convert::AsRef;
 use std::iter::Iterator;
+use std::marker::Sync;
 
 mod matrix;
 pub use self::matrix::Matrix;
@@ -12,7 +13,7 @@ use self::fst::Fst;
 
 pub mod unknown;
 
-pub trait Dic<'a> {
+pub trait Dic<'a>: Sync {
     type Iterator: Iterator<Item = Morph<&'a str>>;
     fn lookup_iter(&'a self, input: &'a [u8]) -> Self::Iterator;
     fn lookup(&'a self, input: &'a [u8]) -> Vec<Morph<&'a str>> {
@@ -60,7 +61,7 @@ impl FstDic<Vec<u8>> {
     }
 }
 
-impl<'a, T: AsRef<[u8]>> Dic<'a> for FstDic<T> {
+impl<'a, T: AsRef<[u8]> + Sync> Dic<'a> for FstDic<T> {
     type Iterator = Iter<'a>;
 
     fn lookup_iter(&'a self, input: &'a [u8]) -> Iter<'a> {

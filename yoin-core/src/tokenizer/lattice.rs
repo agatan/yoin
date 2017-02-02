@@ -1,5 +1,9 @@
 use std::convert::AsRef;
 use std::io::{self, Write};
+use std::sync::mpsc;
+use std::marker::Sync;
+
+use crossbeam;
 
 use dic::{Dic, Morph, Matrix};
 use dic::unknown::{UnknownDic, Entry};
@@ -101,7 +105,7 @@ pub struct Lattice<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]> + 
 /// care about overflow...
 const MAX_COST: i64 = ::std::i32::MAX as i64;
 
-impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, Unk, T> {
+impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]> + Sync> Lattice<'a, D, Unk, T> {
     fn new(char_size: usize, dic: &'a D, unk_dic: &'a Unk, matrix: &'a Matrix<T>) -> Self {
         let mut arena = NodeArena::new();
         let mut end_nodes = vec![Vec::new(); char_size + 2];
@@ -161,76 +165,102 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
     }
 
     pub fn build(input: &'a str, dic: &'a D, unk_dic: &'a Unk, matrix: &'a Matrix<T>) -> Self {
-        let mut la = Lattice::new(input.chars().count(), dic, unk_dic, matrix);
-        let mut input_chars = input.chars();
-        let mut char_pos = 0;
-        let mut byte_pos = 0;
-
-        while !input_chars.as_str().is_empty() {
-            let mut is_matched = false;
-            for m in dic.lookup_str_iter(input_chars.as_str()) {
-                is_matched = true;
-                la.add(char_pos, byte_pos, NodeKind::Known(m));
-            }
-            let ch = input_chars.clone().next().unwrap();
-            let category = unk_dic.categorize(ch);
-            let cid = unk_dic.category_id(ch);
-            let input_str = input_chars.as_str();
-
-            // if no morphs found or character category requires to invoke unknown search
-            if !is_matched || category.invoke {
-                let mut end = ch.len_utf8();
-                let mut word_len = 1;
-                let entries = unk_dic.fetch_entries(cid);
-                if category.group {
-                    while end < input_str.len() {
-                        let c = match input_str[end..].chars().next() {
-                            None => break,
-                            Some(ch) => ch,
-                        };
-                        if cid != unk_dic.category_id(c) {
-                            break;
-                        }
-                        end += c.len_utf8();
-                        word_len += 1;
-                        const MAX_UNKOWN_WORD_LEN: usize = 1024;
-                        if word_len > MAX_UNKOWN_WORD_LEN {
-                            break;
-                        }
-                    }
-                    let surface = &input_str[..end];
-                    for e in entries.iter() {
-                        la.add(char_pos, byte_pos, NodeKind::Unknown(surface, e.clone()));
-                    }
+        let (tx, rx) = mpsc::channel();
+        let mut la = crossbeam::scope(|scope| {
+            // spawn lattice adding thread
+            let th = scope.spawn(|| {
+                let mut la = Lattice::new(input.chars().count(), dic, unk_dic, matrix);
+                for (char_pos, byte_pos, kind) in rx.into_iter() {
+                    la.add(char_pos, byte_pos, kind);
                 }
-                if category.length > 0 {
-                    let mut p = 0;
-                    let mut cloned_chars = input_chars.clone();
-                    for _ in 0..category.length {
-                        match cloned_chars.next() {
-                            None => break,
-                            Some(c) => {
-                                if unk_dic.category_id(c) != cid {
-                                    break;
-                                }
-                                p += c.len_utf8();
+                la
+            });
+
+            // look up fst
+            let mut input_chars = input.chars();
+            let mut char_pos = 0;
+            let mut byte_pos = 0;
+            let mut have_end_nodes = vec![false; input.chars().count() + 2];
+            have_end_nodes[0] = true; // for BOS
+
+            while !input_chars.as_str().is_empty() {
+                let mut is_matched = false;
+                for m in dic.lookup_str_iter(input_chars.as_str()) {
+                    is_matched = true;
+                    have_end_nodes[char_pos + m.surface.chars().count()] = true;
+                    tx.send((char_pos, byte_pos, NodeKind::Known(m))).unwrap();
+                }
+                let ch = input_chars.clone().next().unwrap();
+                let category = unk_dic.categorize(ch);
+                let cid = unk_dic.category_id(ch);
+                let input_str = input_chars.as_str();
+
+                // if no morphs found or character category requires to invoke unknown search
+                if !is_matched || category.invoke {
+                    let mut end = ch.len_utf8();
+                    let mut word_len = 1;
+                    let entries = unk_dic.fetch_entries(cid);
+                    if category.group {
+                        while end < input_str.len() {
+                            let c = match input_str[end..].chars().next() {
+                                None => break,
+                                Some(ch) => ch,
+                            };
+                            if cid != unk_dic.category_id(c) {
+                                break;
+                            }
+                            end += c.len_utf8();
+                            word_len += 1;
+                            const MAX_UNKOWN_WORD_LEN: usize = 1024;
+                            if word_len > MAX_UNKOWN_WORD_LEN {
+                                break;
                             }
                         }
-                        let surface = &(input_chars.as_str())[..p];
+                        let surface = &input_str[..end];
                         for e in entries.iter() {
-                            la.add(char_pos, byte_pos, NodeKind::Unknown(surface, e.clone()));
+                            tx.send((char_pos, byte_pos, NodeKind::Unknown(surface, e.clone())))
+                                .unwrap();
+                            have_end_nodes[char_pos + surface.chars().count()] = true;
+                        }
+                    }
+                    if category.length > 0 {
+                        let mut p = 0;
+                        let mut cloned_chars = input_chars.clone();
+                        for _ in 0..category.length {
+                            match cloned_chars.next() {
+                                None => break,
+                                Some(c) => {
+                                    if unk_dic.category_id(c) != cid {
+                                        break;
+                                    }
+                                    p += c.len_utf8();
+                                }
+                            }
+                            let surface = &(input_chars.as_str())[..p];
+                            for e in entries.iter() {
+                                tx.send((char_pos,
+                                           byte_pos,
+                                           NodeKind::Unknown(surface, e.clone())))
+                                    .unwrap();
+                                have_end_nodes[char_pos + surface.chars().count()] = true;
+                            }
                         }
                     }
                 }
-            }
-            let old_char_pos = char_pos;
-            char_pos = la.next_char_pos(char_pos);
-            for _ in 0..(char_pos - old_char_pos) {
-                if let Some(c) = input_chars.next() {
-                    byte_pos += c.len_utf8();
+                let old_char_pos = char_pos;
+                char_pos += 1;
+                while !have_end_nodes[char_pos] {
+                    char_pos += 1;
+                }
+                for _ in 0..(char_pos - old_char_pos) {
+                    if let Some(c) = input_chars.next() {
+                        byte_pos += c.len_utf8();
+                    }
                 }
             }
-        }
+            ::std::mem::drop(tx);
+            th.join()
+        });
 
         la.end();
         la
