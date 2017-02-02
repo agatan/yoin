@@ -129,8 +129,8 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
             kind: kind,
         });
         let node = self.arena.get(id);
-        self.prev_table.push(DUMMY_PREV_NODE);
-        self.cost_table.push(MAX_COST);
+        let mut node_prev = DUMMY_PREV_NODE;
+        let mut node_cost = MAX_COST;
 
         for &enode_id in &self.end_nodes[self.pointer] {
             let enode = self.arena.get(enode_id);
@@ -138,11 +138,14 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
                 self.matrix.connection_cost(enode.kind.right_id(), node.kind.left_id()) as i64 +
                 node.kind.weight() as i64;
             let total_cost = self.cost_table[enode_id] + cost;
-            if total_cost < self.cost_table[id] {
-                self.cost_table[id] = total_cost;
-                self.prev_table[id] = enode_id;
+            if total_cost < node_cost {
+                node_cost = total_cost;
+                node_prev = enode_id;
             }
         }
+
+        self.prev_table.push(node_prev);
+        self.cost_table.push(node_cost);
         self.end_nodes[self.pointer + node.surface_len()].push(id);
     }
 
