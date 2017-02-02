@@ -87,7 +87,7 @@ impl<'a> Iterator for Iter<'a> {
     type Item = Morph<&'a str>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|acc| self.fetch_entry(acc.value as usize))
+        self.iter.next().map(|acc| self.fetch_entry(acc.0 as usize))
     }
 }
 

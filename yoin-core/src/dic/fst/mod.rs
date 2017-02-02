@@ -49,10 +49,7 @@ pub struct Iter<'a> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Accept {
-    pub len: usize,
-    pub value: u32,
-}
+pub struct Accept(pub u32);
 
 impl<'a> Iter<'a> {
     pub fn new(iseq: &'a [u8], input: &'a [u8]) -> Self {
@@ -146,10 +143,7 @@ impl<'a> Iterator for Iter<'a> {
                     self.pc += 1;
                     debug_assert!(self.data_len == 4);
                     let value = gen_data(&self.data);
-                    let accept = Accept {
-                        len: self.len,
-                        value: value,
-                    };
+                    let accept = Accept(value);
                     return Some(accept);
                 }
                 op::OPCODE_ACCEPT_WITH => {
@@ -163,10 +157,7 @@ impl<'a> Iterator for Iter<'a> {
                     }
                     debug_assert!(self.data_len == 4);
                     let value = gen_data(&self.data);
-                    let accept = Accept {
-                        len: self.len,
-                        value: value,
-                    };
+                    let accept = Accept(value);
                     self.data_len = save;
                     return Some(accept);
                 }
@@ -188,15 +179,7 @@ fn test_run() {
     let samples: Vec<(&[u8], u32)> = vec![(b"ab", 0xFF), (b"abc", 0), (b"abc", !0), (b"abd", 1)];
     let iseq = Fst::build(samples);
     let accs: HashSet<_> = iseq.run(b"abc").into_iter().collect();
-    let expects: HashSet<_> = vec![Accept {
-                                       len: 2,
-                                       value: 0xFF,
-                                   },
-                                   Accept { len: 3, value: 0 },
-                                   Accept {
-                                       len: 3,
-                                       value: !0,
-                                   }]
+    let expects: HashSet<_> = vec![Accept(0xFF), Accept(0), Accept(!0)]
         .into_iter()
         .collect();
     assert_eq!(accs, expects);
