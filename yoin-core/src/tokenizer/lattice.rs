@@ -129,14 +129,14 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
             kind: kind,
         });
         let node = self.arena.get(id);
+        let node_weight = node.kind.weight() as i64;
+        let node_conn_row = self.matrix.row(node.kind.left_id());
         let mut node_prev = DUMMY_PREV_NODE;
         let mut node_cost = MAX_COST;
 
         for &enode_id in &self.end_nodes[self.pointer] {
             let enode = self.arena.get(enode_id);
-            let cost =
-                self.matrix.connection_cost(enode.kind.right_id(), node.kind.left_id()) as i64 +
-                node.kind.weight() as i64;
+            let cost = node_conn_row[enode.kind.right_id() as usize] as i64 + node_weight;
             let total_cost = self.cost_table[enode_id] + cost;
             if total_cost < node_cost {
                 node_cost = total_cost;
@@ -274,7 +274,10 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
         writeln!(w, "\tnode [shape=circle]")?;
         for (id, &prev_id) in self.prev_table.iter().enumerate() {
             if prev_id != DUMMY_PREV_NODE {
-                writeln!(w, "\t\"{}\"[label=\"{}\"];", id, self.arena.get(id).surface())?;
+                writeln!(w,
+                         "\t\"{}\"[label=\"{}\"];",
+                         id,
+                         self.arena.get(id).surface())?;
                 let prev_node = self.arena.get(prev_id);
                 writeln!(w, "\t\"{}\"[label=\"{}\"];", prev_id, prev_node.surface())?;
                 writeln!(w, "\t\"{}\" -> \"{}\";", prev_id, id)?;
