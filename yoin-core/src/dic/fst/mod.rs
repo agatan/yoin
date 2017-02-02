@@ -219,6 +219,5 @@ fn test_op() {
         vec![Accept { len: 3, value: 3 }, Accept { len: 3, value: 4 }, Accept { len: 4, value: 8 }]
             .into_iter()
             .collect();
-    assert_eq!(iseq.run_iter(b"feb'").collect::<HashSet<_>>(),
-               expected);
+    assert_eq!(iseq.run_iter(b"feb'").collect::<HashSet<_>>(), expected);
 }

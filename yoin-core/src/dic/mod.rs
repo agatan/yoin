@@ -13,7 +13,7 @@ use self::fst::Fst;
 pub mod unknown;
 
 pub trait Dic<'a> {
-    type Iterator: Iterator<Item=Morph<&'a str>>;
+    type Iterator: Iterator<Item = Morph<&'a str>>;
     fn lookup_iter(&'a self, input: &'a [u8]) -> Self::Iterator;
     fn lookup(&'a self, input: &'a [u8]) -> Vec<Morph<&'a str>> {
         self.lookup_iter(input).collect()
@@ -41,7 +41,7 @@ impl<'a> FstDic<&'a [u8]> {
     }
 }
 
-impl  FstDic<Vec<u8>> {
+impl FstDic<Vec<u8>> {
     pub fn build<S: AsRef<str>>(morphs: &[Morph<S>]) -> Self {
         let mut morph_bytes = Vec::new();
         let mut fst_inputs = Vec::new();

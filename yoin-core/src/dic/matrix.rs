@@ -37,7 +37,7 @@ impl<T: AsRef<[i16]>> Matrix<T> {
 
     pub fn row(&self, left_id: u16) -> &[i16] {
         let h = left_id as usize;
-        let start = h * self.width  as usize;
+        let start = h * self.width as usize;
         &self.table.as_ref()[start..start + self.width as usize]
     }
 }

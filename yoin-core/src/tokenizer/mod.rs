@@ -73,7 +73,11 @@ impl Tokenizer {
     }
 
     pub fn dump_lattice<'a, W: Write>(&'a self, input: &'a str, w: W) -> io::Result<()> {
-        Lattice::build(input, &self.sysdic.dic, &self.sysdic.unknown_dic, &self.sysdic.matrix).dump_dot(w)
+        Lattice::build(input,
+                       &self.sysdic.dic,
+                       &self.sysdic.unknown_dic,
+                       &self.sysdic.matrix)
+            .dump_dot(w)
     }
 
     pub fn tokenize<'a>(&'a self, input: &'a str) -> Vec<Token<'a>> {

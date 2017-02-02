@@ -52,7 +52,7 @@ mod tests {
                     "KATAKANA entry should be either '名詞' or '感動詞', got: {:?}",
                     e);
         }
-        let numerics =  (0..10).map(|i| {
+        let numerics = (0..10).map(|i| {
             let c = ::std::char::from_digit(i, 10).unwrap();
             dic.category_id(c)
         });

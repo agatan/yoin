@@ -10,9 +10,7 @@ use yoin::ipadic;
 fn bench_sumomo(b: &mut Bencher) {
     let input = "すもももももももものうち";
     let tokenizer = ipadic::tokenizer();
-    b.iter(|| {
-        tokenizer.tokenize(input)
-    })
+    b.iter(|| tokenizer.tokenize(input))
 }
 
 // from wikipedia (https://ja.wikipedia.org/wiki/形態素解析)
