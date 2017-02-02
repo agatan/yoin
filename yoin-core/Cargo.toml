@@ -7,3 +7,4 @@ license-file = "LICENSE"
 
 [dependencies]
 byteorder = "1.0.0"
+crossbeam = "0.2"
