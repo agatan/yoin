@@ -8,8 +8,6 @@
 
 [mecab-ipadic](https://taku910.github.io/mecab/) is embedded in `yoin`.
 
-This crate depends on [agatan/yoin-core](https://github.com/agatan/yoin-core) and [agatan/yoin-ipadic](https://github.com/agatan/yoin-ipadic).
-
 ```sh
 :) $ yoin
 すもももももももものうち
