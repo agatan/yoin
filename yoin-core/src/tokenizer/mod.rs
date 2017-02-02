@@ -20,7 +20,7 @@ impl<'a> Token<'a> {
         let (surface, contents) = match kind {
             NodeKind::BOS | NodeKind::EOS => unreachable!(),
             NodeKind::Known(morph) => (morph.surface, morph.contents),
-            NodeKind::Unkown(surface, entry) => (surface, entry.contents),
+            NodeKind::Unknown(surface, entry) => (surface, entry.contents),
         };
 
         Token {

@@ -9,7 +9,7 @@ pub enum NodeKind<'a> {
     BOS,
     EOS,
     Known(Morph<&'a str>),
-    Unkown(&'a str, Entry<'a>),
+    Unknown(&'a str, Entry<'a>),
 }
 
 impl<'a> NodeKind<'a> {
@@ -17,7 +17,7 @@ impl<'a> NodeKind<'a> {
         match *self {
             NodeKind::BOS | NodeKind::EOS => 0,
             NodeKind::Known(ref morph) => morph.left_id,
-            NodeKind::Unkown(_, ref e) => e.left_id,
+            NodeKind::Unknown(_, ref e) => e.left_id,
         }
     }
 
@@ -25,7 +25,7 @@ impl<'a> NodeKind<'a> {
         match *self {
             NodeKind::BOS | NodeKind::EOS => 0,
             NodeKind::Known(ref morph) => morph.right_id,
-            NodeKind::Unkown(_, ref e) => e.right_id,
+            NodeKind::Unknown(_, ref e) => e.right_id,
         }
     }
 
@@ -33,7 +33,7 @@ impl<'a> NodeKind<'a> {
         match *self {
             NodeKind::BOS | NodeKind::EOS => 0,
             NodeKind::Known(ref morph) => morph.weight,
-            NodeKind::Unkown(_, ref e) => e.weight,
+            NodeKind::Unknown(_, ref e) => e.weight,
         }
     }
 }
@@ -52,7 +52,7 @@ impl<'a> Node<'a> {
             NodeKind::BOS => "BOS",
             NodeKind::EOS => "EOS",
             NodeKind::Known(ref m) => m.surface,
-            NodeKind::Unkown(surface, _) => surface,
+            NodeKind::Unknown(surface, _) => surface,
         }
     }
 
@@ -61,7 +61,7 @@ impl<'a> Node<'a> {
             NodeKind::BOS => 0,
             NodeKind::EOS => 1,
             NodeKind::Known(ref m) => m.surface.chars().count(),
-            NodeKind::Unkown(s, _) => s.chars().count(),
+            NodeKind::Unknown(s, _) => s.chars().count(),
         }
     }
 }
@@ -198,7 +198,7 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
                     }
                     let surface = &input_str[..end];
                     for e in entries.iter() {
-                        la.add(byte_pos, NodeKind::Unkown(surface, e.clone()));
+                        la.add(byte_pos, NodeKind::Unknown(surface, e.clone()));
                     }
                 }
                 if category.length > 0 {
@@ -216,7 +216,7 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
                         }
                         let surface = &(input_chars.as_str())[..p];
                         for e in entries.iter() {
-                            la.add(byte_pos, NodeKind::Unkown(surface, e.clone()));
+                            la.add(byte_pos, NodeKind::Unknown(surface, e.clone()));
                         }
                     }
                 }
