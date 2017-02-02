@@ -199,7 +199,7 @@ fn test_op() {
                                           (b"jun", 7)];
     let iseq = Fst::build(samples);
     let expected =
-        vec![Accept { len: 3, value: 3 }, Accept { len: 3, value: 4 }, Accept { len: 4, value: 8 }]
+        vec![Accept(3), Accept(4), Accept(8)]
             .into_iter()
             .collect();
     assert_eq!(iseq.run_iter(b"feb'").collect::<HashSet<_>>(), expected);
