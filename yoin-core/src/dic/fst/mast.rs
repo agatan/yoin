@@ -19,8 +19,8 @@ pub struct State {
     pub id: StateId,
     pub is_final: bool,
     pub trans: HashMap<u8, Rc<RefCell<State>>>,
-    pub output: HashMap<u8, Vec<u8>>,
-    pub state_output: HashSet<Vec<u8>>,
+    pub output: HashMap<u8, u32>,
+    pub state_output: Vec<u32>,
     hash_code_mem: Cell<Option<StateHash>>,
 }
 
@@ -39,7 +39,7 @@ impl State {
             is_final: false,
             trans: HashMap::new(),
             output: HashMap::new(),
-            state_output: HashSet::new(),
+            state_output: Vec::new(),
             hash_code_mem: Cell::new(None),
         }
     }
@@ -51,15 +51,19 @@ impl State {
         self.trans.insert(c, to);
     }
 
-    pub fn output(&self, c: u8) -> Option<&[u8]> {
-        self.output.get(&c).map(|x| x.as_slice())
+    pub fn output(&self, c: u8) -> Option<u32> {
+        self.output.get(&c).cloned()
     }
 
-    fn set_output(&mut self, c: u8, out: Vec<u8>) {
+    fn set_output(&mut self, c: u8, out: u32) {
         self.output.insert(c, out);
     }
 
-    fn set_state_output(&mut self, outs: HashSet<Vec<u8>>) {
+    fn add_state_output(&mut self, out: u32) {
+        self.state_output.push(out);
+    }
+
+    fn set_state_output(&mut self, outs: Vec<u32>) {
         self.state_output = outs;
     }
 
@@ -68,11 +72,9 @@ impl State {
             Some(s) => s,
             None => {
                 let mut code = 0i32;
-                for (&c, bs) in &self.output {
+                for (&c, &b) in &self.output {
                     code = code.wrapping_add((c as i32).wrapping_mul(OUTPUT_MAGIC));
-                    for &b in bs {
-                        code = code.wrapping_add((b as i32).wrapping_mul(OUTPUT_MAGIC));
-                    }
+                    code = code.wrapping_add((b as i32).wrapping_mul(OUTPUT_MAGIC));
                 }
                 for (&c, to) in &self.trans {
                     code = code.wrapping_add((c as i32).wrapping_mul(TRANS_MAGIC));
@@ -174,13 +176,11 @@ impl Mast {
         let mut chars = HashSet::new();
         let mut last_input: &[u8] = b"";
 
-        for (input, output) in pairs {
+        for (input, current_output) in pairs {
             debug_assert!(input >= prev_word);
             // hold the last input.
             last_input = input;
             // setup
-            let current_output: [u8; 4] = unsafe { ::std::mem::transmute(output) };
-            let mut current_output: &[u8] = &current_output;
             while buf.len() <= input.len() {
                 buf.push(Rc::new(RefCell::new(State::new())));
             }
@@ -202,56 +202,44 @@ impl Mast {
 
             if input != prev_word {
                 buf[input.len()].borrow_mut().is_final = true;
-                let mut outs = HashSet::new();
-                outs.insert(Vec::new());
-                buf[input.len()].borrow_mut().set_state_output(outs);
+                buf[input.len()].borrow_mut().set_state_output(Vec::new());
             }
 
+            let mut is_new_output = true;
             for j in 1..(prefix_len + 1) {
                 let output = match buf[j - 1].borrow().output(input[j - 1]) {
-                    Some(output) => Vec::from(output),
-                    None => Vec::new(),
+                    Some(output) => output,
+                    None => continue,
                 };
-                let mut common_prefix = Vec::new();
-                for (current_out, out) in current_output.iter().zip(output.iter()) {
-                    if current_out != out {
-                        break;
-                    }
-                    common_prefix.push(*current_out);
+                if current_output == output {
+                    is_new_output = false;
+                    break;
                 }
-                let common_prefix_len = common_prefix.len();
-                let word_suffix = &output[common_prefix_len..];
-                buf[j - 1].borrow_mut().set_output(input[j - 1], common_prefix);
+                // common_prefix_len == 4 or 0
+                // if cpl == 0 { remove output  }
+                buf[j - 1].borrow_mut().output.remove(&input[j - 1]);
 
                 for &c in chars.iter() {
                     if buf[j].borrow().transition(c).is_some() {
-                        let mut new_output = Vec::from(word_suffix);
-                        if let Some(os) = buf[j].borrow().output(c) {
-                            new_output.extend_from_slice(os);
-                        }
-                        buf[j].borrow_mut().set_output(c, new_output);
+                        // if cpl == 0 { set output to output }
+                        buf[j].borrow_mut().set_output(c, output);
                     }
                 }
 
                 if buf[j].borrow().is_final {
-                    let mut temp_set = HashSet::new();
-                    for temp_str in buf[j].borrow().state_output.iter() {
-                        let mut new_output = Vec::from(word_suffix);
-                        new_output.extend_from_slice(temp_str);
-                        temp_set.insert(new_output);
-                    }
-                    buf[j].borrow_mut().set_state_output(temp_set);
+                    // if cpl == 0 { set state output }
+                    buf[j].borrow_mut().add_state_output(output);
                 }
-
-                current_output = &current_output[common_prefix_len..];
             }
 
-            if input == prev_word {
-                buf[input.len()].borrow_mut().state_output.insert(Vec::from(current_output));
-            } else {
-                buf[prefix_len]
-                    .borrow_mut()
-                    .set_output(input[prefix_len], Vec::from(current_output));
+            if is_new_output {
+                if input == prev_word {
+                    buf[input.len()].borrow_mut().add_state_output(current_output);
+                } else {
+                    buf[prefix_len]
+                        .borrow_mut()
+                        .set_output(input[prefix_len], current_output);
+                }
             }
             prev_word = input;
         }
@@ -281,10 +269,10 @@ impl Mast {
         println!("\tnode [shape=circle]");
         for s in states {
             if s.borrow().is_final {
-                println!("\t{:?} [peripheries = 2];", s.borrow().id);
+                println!("\t{:?} [peripheries = 2];", s.borrow().id.0);
             }
         }
-        println!("\t{:?} [peripheries = 3];", initial.borrow().id);
+        println!("\t{:?} [peripheries = 3];", initial.borrow().id.0);
 
         let mut stack = Vec::new();
         let mut done = StateTable::new();
@@ -294,8 +282,8 @@ impl Mast {
             let state = s.borrow();
             for (c, to) in &state.trans {
                 print!("\t{:?} -> {:?} [label=\"{}/{:?}",
-                       state.id,
-                       to.borrow().id,
+                       state.id.0,
+                       to.borrow().id.0,
                        *c as char,
                        state.output(*c));
                 if !to.borrow().state_output.is_empty() {
@@ -314,13 +302,17 @@ impl Mast {
     #[allow(unused)]
     pub fn run(&self, input: &[u8]) -> Result<Vec<u32>, String> {
         let mut state = self.initial.clone();
-        let mut buf = [0; 4];
-        let mut i = 0;
+        let mut results = Vec::new();
+        let mut buf = None;
         for &c in input {
-            if let Some(os) = state.borrow().output(c) {
-                for o in os {
-                    buf[i] = *o;
-                    i += 1;
+            if let Some(o) = state.borrow().output(c) {
+                debug_assert!(buf.is_none());
+                buf = Some(o);
+                results.push(o);
+            }
+            if state.borrow().is_final {
+                for o in state.borrow().state_output.iter().cloned() {
+                    results.push(o);
                 }
             }
             let new_state = match state.borrow().transition(c) {
@@ -329,38 +321,21 @@ impl Mast {
             };
             state = new_state;
         }
-        if state.borrow().state_output.is_empty() {
-            debug_assert!(i == 4);
-            let n = unsafe { ::std::mem::transmute(buf) };
-            Ok(vec![n])
-        } else {
-            let results = state.borrow()
-                .state_output
-                .iter()
-                .map(|os| {
-                    let mut b = buf.clone();
-                    let mut i = i;
-                    for o in os {
-                        b[i] = *o;
-                        i += 1;
-                    }
-                    debug_assert!(i == 4);
-                    unsafe { ::std::mem::transmute(b) }
-                })
-                .collect();
-            Ok(results)
+        if state.borrow().is_final {
+            for o in state.borrow().state_output.iter().cloned() {
+                results.push(o);
+            }
         }
+        Ok(results)
     }
 }
 
 #[test]
-fn test_build() {
-    use dic::fst::op::build;
-    let samples: Vec<(&[u8], u32)> = vec![(b"a", !0)];
-    let expected: Vec<u8> = vec![0b00000100, 0b01100001, 0b00000101, 0b00000000, 0b11111111,
-                                 0b11111111, 0b11111111, 0b11111111, 0b01000000, 0b01100000,
-                                 0b01000000];
+fn test_run() {
+    use std::collections::HashSet;
+    let samples: Vec<(&[u8], u32)> = vec![(b"a ", 0), (b"a ", 1), (b"a b ", 2), (b"a b c ", 3)];
     let m = Mast::build(samples);
-    let bytes = build(m);
-    assert_eq!(bytes, expected);
+    m.print_dot();
+    let values = m.run("a b c ".as_bytes()).unwrap().into_iter().collect::<HashSet<_>>();
+    assert_eq!(vec![0, 1, 2, 3].into_iter().collect::<HashSet<_>>(), values);
 }
