@@ -13,17 +13,14 @@ pub struct Op(pub u8);
 
 const OPCODE_MASK: Op = Op(0b111_00000);
 
-/// OUTJUMP: op | jump | data, ch, jump..., data...
+/// OUTJUMP: op | jump , ch, jump..., data...
 pub const OPCODE_OUTJUMP: Op = Op(0b000_00000);
 /// JUMP: op | jump, ch, jump...
 pub const OPCODE_JUMP: Op = Op(0b001_00000);
 pub const OPCODE_BREAK: Op = Op(0b010_00000);
-pub const OPCODE_ACCEPT: Op = Op(0b011_00000);
 pub const OPCODE_ACCEPT_WITH: Op = Op(0b100_00000);
 
 pub const JUMP_SIZE_MASK: Op = Op(0b000_11_000);
-
-pub const DATA_SIZE_MASK: Op = Op(0b000_00_111);
 
 pub const JUMP_SIZE_OFFSET: u8 = 3;
 pub const JUMP_SIZE_16: u8 = 0;
@@ -81,15 +78,6 @@ impl Op {
         self.0 |= (size << JUMP_SIZE_OFFSET) & JUMP_SIZE_MASK.0;
         self
     }
-
-    pub fn data_bytes(self) -> u8 {
-        self.0 & DATA_SIZE_MASK.0
-    }
-
-    fn with_data_bytes(mut self, size: u8) -> Op {
-        self.0 |= size & DATA_SIZE_MASK.0;
-        self
-    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -115,19 +103,10 @@ impl Compiler {
         }
     }
 
-    fn compile_output(&mut self, data: &[u8]) -> u8 {
-        let data_size = data.len();
-        debug_assert!(data_size <= 4);
-        for d in data.iter().rev() {
-            self.rev_bytes.push(*d);
-        }
-        data_size as u8
-    }
-
-    fn compile_outjump(&mut self, ch: u8, to: usize, data: &[u8]) {
-        let data_size = self.compile_output(data);
+    fn compile_outjump(&mut self, ch: u8, to: usize, data: u32) {
+        self.rev_bytes.write_u32::<BigEndian>(data).unwrap();
         let jump_size = self.compile_jump_offset(to);
-        let op = OPCODE_OUTJUMP.with_data_bytes(data_size).with_jump_bytes(jump_size);
+        let op = OPCODE_OUTJUMP.with_jump_bytes(jump_size);
         self.rev_bytes.push(ch);
         self.rev_bytes.push(op.0);
     }
@@ -139,19 +118,16 @@ impl Compiler {
         self.rev_bytes.push(op.0);
     }
 
-    fn compile_accept_with(&mut self, data: &[u8]) {
-        debug_assert!(data.len() <= 4);
-        let op = OPCODE_ACCEPT_WITH.with_data_bytes(data.len() as u8);
-        for d in data.iter().rev() {
-            self.rev_bytes.push(*d);
-        }
+    fn compile_accept_with(&mut self, data: u32) {
+        let op = OPCODE_ACCEPT_WITH;
+        self.rev_bytes.write_u32::<BigEndian>(data).unwrap();
         self.rev_bytes.push(op.0);
     }
 
     fn compile_transition(&mut self, from: &State, ch: u8, to: &State) {
         let to_pos = self.jump_table[&to.id];
         match from.output(ch) {
-            Some(out) if !out.is_empty() => self.compile_outjump(ch, to_pos, out),
+            Some(out) => self.compile_outjump(ch, to_pos, out),
             _ => self.compile_jump(ch, to_pos),
         }
     }
@@ -162,12 +138,8 @@ impl Compiler {
             self.compile_transition(state, ch, &*to.borrow());
         }
         if state.is_final {
-            for output in state.state_output.iter() {
-                if output.is_empty() {
-                    self.rev_bytes.push(OPCODE_ACCEPT.0);
-                } else {
-                    self.compile_accept_with(output);
-                }
+            for &output in state.state_output.iter() {
+                self.compile_accept_with(output);
             }
         }
         self.jump_table.insert(state.id, self.rev_bytes.len() - 1);

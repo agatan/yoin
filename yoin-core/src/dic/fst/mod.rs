@@ -42,8 +42,6 @@ impl Fst<Vec<u8>> {
 pub struct Iter<'a> {
     pc: usize,
     iseq: &'a [u8],
-    data: [u8; 4],
-    data_len: u8,
     input: &'a [u8],
     len: usize,
 }
@@ -56,8 +54,6 @@ impl<'a> Iter<'a> {
         Iter {
             pc: 0,
             iseq: iseq,
-            data: [0; 4],
-            data_len: 0,
             input: input,
             len: 0,
         }
@@ -98,24 +94,20 @@ impl<'a> Iter<'a> {
         self.pc += jump;
     }
 
-    fn run_outjump(&mut self) {
+    fn run_outjump(&mut self) -> Option<u32> {
         let op = op::Op(self.iseq[self.pc]);
         self.pc += 1;
         let cmp = self.iseq[self.pc];
         self.pc += 1;
         let jump = self.get_jump_offset(op.jump_bytes());
         if cmp != self.input[self.len] {
-            self.pc += op.data_bytes() as usize; // skip unused data bytes.
-            return;
+            self.pc += 4 as usize; // skip unused data bytes.
+            return None;
         }
         self.len += 1;
-        for _ in 0..op.data_bytes() {
-            debug_assert!(self.data_len < 4, "output data is not 4 bytes");
-            self.data[self.data_len as usize] = self.iseq[self.pc];
-            self.data_len += 1;
-            self.pc += 1;
-        }
-        self.pc += jump - op.data_bytes() as usize;
+        let n = self.read_u32();
+        self.pc += jump - 4 as usize;
+        Some(n)
     }
 }
 
@@ -137,39 +129,21 @@ impl<'a> Iterator for Iter<'a> {
                     if self.len >= self.input.len() {
                         return None;
                     }
-                    self.run_outjump();
-                }
-                op::OPCODE_ACCEPT => {
-                    self.pc += 1;
-                    debug_assert!(self.data_len == 4);
-                    let value = gen_data(&self.data);
-                    let accept = Accept(value);
-                    return Some(accept);
+                    match self.run_outjump() {
+                        None => (),
+                        Some(n) => return Some(Accept(n)),
+                    }
                 }
                 op::OPCODE_ACCEPT_WITH => {
-                    let save = self.data_len;
                     self.pc += 1; // skip op::OPCODE_ACCEPT_WITH
-                    for _ in 0..op.data_bytes() {
-                        debug_assert!(self.data_len < 4);
-                        self.data[self.data_len as usize] = self.iseq[self.pc];
-                        self.pc += 1;
-                        self.data_len += 1;
-                    }
-                    debug_assert!(self.data_len == 4);
-                    let value = gen_data(&self.data);
-                    let accept = Accept(value);
-                    self.data_len = save;
+                    let n = self.read_u32();
+                    let accept = Accept(n);
                     return Some(accept);
                 }
                 op => unreachable!("unknown operator in bytecode: {:?}", op),
             }
         }
     }
-}
-
-fn gen_data(data: &[u8; 4]) -> u32 {
-    let from = data.as_ptr() as *const u32;
-    unsafe { *from }
 }
 
 #[test]
