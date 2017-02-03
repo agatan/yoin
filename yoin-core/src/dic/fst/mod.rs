@@ -2,6 +2,7 @@ use std::convert::AsRef;
 use std::iter::IntoIterator;
 
 mod mast;
+mod mast_u32;
 mod op;
 
 #[derive(Debug, Clone)]
