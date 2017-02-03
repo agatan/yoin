@@ -47,6 +47,8 @@ pub struct Node<'a> {
 }
 
 impl<'a> Node<'a> {
+    /// for debugging
+    #[allow(unused)]
     fn surface(&self) -> &str {
         match self.kind {
             NodeKind::BOS => "BOS",
@@ -268,7 +270,9 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
         results
     }
 
-    pub fn dump_dot<W: Write>(&self, mut w: W) -> io::Result<()> {
+    /// for debugging
+    #[allow(unused)]
+    fn dump_dot<W: Write>(&self, mut w: W) -> io::Result<()> {
         writeln!(w, "digraph lattice {{")?;
         writeln!(w, "\trankdir=LR;")?;
         writeln!(w, "\tnode [shape=circle]")?;
