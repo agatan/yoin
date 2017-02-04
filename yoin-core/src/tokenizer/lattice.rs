@@ -1,8 +1,8 @@
-use std::convert::AsRef;
 use std::io::{self, Write};
 
-use dic::{Dic, Morph, Matrix};
-use dic::unknown::{UnknownDic, Entry};
+use dic::{Dic, Morph};
+use dic::unknown::{UnknownDic, Entry, CharCategorize};
+use sysdic::SysDic;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum NodeKind<'a> {
@@ -89,11 +89,9 @@ impl<'a> NodeArena<'a> {
 
 const DUMMY_PREV_NODE: NodeId = !0;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Lattice<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]> + 'a> {
-    dic: &'a D,
-    unk_dic: &'a Unk,
-    matrix: &'a Matrix<T>,
+#[derive(Clone)]
+pub struct Lattice<'a> {
+    sdic: &'a SysDic,
     arena: NodeArena<'a>,
     end_nodes: Vec<Vec<NodeId>>,
     prev_table: Vec<NodeId>,
@@ -104,8 +102,8 @@ pub struct Lattice<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]> + 
 /// care about overflow...
 const MAX_COST: i64 = ::std::i32::MAX as i64;
 
-impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, Unk, T> {
-    fn new(char_size: usize, dic: &'a D, unk_dic: &'a Unk, matrix: &'a Matrix<T>) -> Self {
+impl<'a> Lattice<'a> {
+    fn new(char_size: usize, sdic: &'a SysDic) -> Self {
         let mut arena = NodeArena::new();
         let mut end_nodes = vec![Vec::new(); char_size + 2];
         let bos = arena.add(Node {
@@ -114,9 +112,7 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
         });
         end_nodes[0].push(bos);
         Lattice {
-            dic: dic,
-            unk_dic: unk_dic,
-            matrix: matrix,
+            sdic: sdic,
             arena: arena,
             end_nodes: end_nodes,
             prev_table: vec![0],
@@ -132,7 +128,7 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
         });
         let node = self.arena.get(id);
         let node_weight = node.kind.weight() as i64;
-        let node_conn_row = self.matrix.row(node.kind.left_id());
+        let node_conn_row = self.sdic.matrix.row(node.kind.left_id());
         let mut node_prev = DUMMY_PREV_NODE;
         let mut node_cost = MAX_COST;
 
@@ -164,34 +160,34 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
         self.add(!0, NodeKind::EOS);
     }
 
-    pub fn build(input: &'a str, dic: &'a D, unk_dic: &'a Unk, matrix: &'a Matrix<T>) -> Self {
-        let mut la = Lattice::new(input.chars().count(), dic, unk_dic, matrix);
+    pub fn build(input: &'a str, sysdic: &'a SysDic) -> Self {
+        let mut la = Lattice::new(input.chars().count(), sysdic);
         let mut input_chars = input.chars();
         let mut byte_pos = 0;
 
         while !input_chars.as_str().is_empty() {
             let mut is_matched = false;
-            for m in dic.lookup_str_iter(input_chars.as_str()) {
+            for m in sysdic.dic.lookup_str_iter(input_chars.as_str()) {
                 is_matched = true;
                 la.add(byte_pos, NodeKind::Known(m));
             }
             let ch = input_chars.clone().next().unwrap();
-            let category = unk_dic.categorize(ch);
-            let cid = unk_dic.category_id(ch);
+            let category = sysdic.unknown_dic.categorize(ch);
+            let cid = sysdic.unknown_dic.category_id(ch);
             let input_str = input_chars.as_str();
 
             // if no morphs found or character category requires to invoke unknown search
             if !is_matched || category.invoke {
                 let mut end = ch.len_utf8();
                 let mut word_len = 1;
-                let entries = unk_dic.fetch_entries(cid);
+                let entries = sysdic.unknown_dic.fetch_entries(cid);
                 if category.group {
                     while end < input_str.len() {
                         let c = match input_str[end..].chars().next() {
                             None => break,
                             Some(ch) => ch,
                         };
-                        if cid != unk_dic.category_id(c) {
+                        if cid != sysdic.unknown_dic.category_id(c) {
                             break;
                         }
                         end += c.len_utf8();
@@ -213,7 +209,7 @@ impl<'a, D: Dic<'a> + 'a, Unk: UnknownDic + 'a, T: AsRef<[i16]>> Lattice<'a, D, 
                         match cloned_chars.next() {
                             None => break,
                             Some(c) => {
-                                if unk_dic.category_id(c) != cid {
+                                if sysdic.unknown_dic.category_id(c) != cid {
                                     break;
                                 }
                                 p += c.len_utf8();
