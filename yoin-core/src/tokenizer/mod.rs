@@ -72,10 +72,7 @@ impl Tokenizer {
     }
 
     pub fn tokenize<'a>(&'a self, input: &'a str) -> Vec<Token<'a>> {
-        let la = Lattice::build(input,
-                                &self.sysdic.dic,
-                                &self.sysdic.unknown_dic,
-                                &self.sysdic.matrix);
+        let la = Lattice::build(input, &self.sysdic);
         la.into_output().into_iter().map(|node| Token::new(node)).collect()
     }
 }
