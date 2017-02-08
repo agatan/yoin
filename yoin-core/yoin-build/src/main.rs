@@ -6,7 +6,7 @@ use std::fs::{self, File};
 use std::path::Path;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
-use std::convert::From;
+use std::convert::{AsRef, From};
 use std::collections::HashMap;
 
 use clap::{App, Arg};
@@ -34,7 +34,7 @@ impl From<io::Error> for Error {
     }
 }
 
-fn read_csv<P: Borrow<Path>>(buf: &mut Vec<String>, path: P) -> Result<(), Error> {
+fn read_csv<P: AsRef<Path>>(buf: &mut Vec<String>, path: P) -> Result<(), Error> {
     let mut file = File::open(path)?;
     let mut contents = Vec::new();
     file.read_to_end(&mut contents)?;
@@ -77,7 +77,7 @@ fn build_entries(morphs: &[String]) -> Result<(Vec<(&[u8], u32)>, Vec<u8>), Erro
     Ok((inputs, bytes))
 }
 
-fn read_matrix<P: Borrow<Path>>(path: P) -> Result<Matrix<Vec<i16>>, Error> {
+fn read_matrix<P: AsRef<Path>>(path: P) -> Result<Matrix<Vec<i16>>, Error> {
     let file = File::open(path)?;
     let mut reader = BufReader::new(file);
     let mut first_line = String::new();
@@ -160,7 +160,7 @@ fn build_chardef(contents: &str) -> Result<(CharTable, HashMap<String, CategoryI
         } else {
             let start = u32::from_str_radix(&range[0][2..], 16).map_err(|_| Error::InvalidChardef)?;
             let end = u32::from_str_radix(&range[1][2..], 16).map_err(|_| Error::InvalidChardef)?;
-            for c in start..(end+1) {
+            for c in start..(end + 1) {
                 char_table.set(c as usize, cate_id);
             }
         }
@@ -169,17 +169,17 @@ fn build_chardef(contents: &str) -> Result<(CharTable, HashMap<String, CategoryI
     Ok((char_table, table))
 }
 
-fn build_unknown_dic<P: Borrow<Path>>(dicdir: P) -> Result<UnkDic, Error> {
+fn build_unknown_dic<P: AsRef<Path>>(dicdir: P) -> Result<UnkDic, Error> {
     let (char_table, cate_table) = {
         let mut buf = Vec::new();
-        File::open(dicdir.borrow().join("char.def"))?.read_to_end(&mut buf)?;
+        File::open(dicdir.as_ref().join("char.def"))?.read_to_end(&mut buf)?;
         let contents = EUC_JP.decode(&buf, DecoderTrap::Strict)
             .map_err(|_| Error::InvalidEncode)?;
         build_chardef(&contents)?
     };
 
     let mut contents = Vec::new();
-    File::open(dicdir.borrow().join("unk.def"))?.read_to_end(&mut contents)?;
+    File::open(dicdir.as_ref().join("unk.def"))?.read_to_end(&mut contents)?;
     let contents = EUC_JP.decode(&contents, DecoderTrap::Strict).map_err(|_| Error::InvalidEncode)?;
     let mut entries = HashMap::new();
     for line in contents.lines() {
