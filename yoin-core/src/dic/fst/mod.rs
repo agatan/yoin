@@ -1,4 +1,4 @@
-use std::convert::AsRef;
+use std::borrow::Borrow;
 use std::iter::IntoIterator;
 
 mod mast;
@@ -6,7 +6,7 @@ mod op;
 
 #[derive(Debug, Clone)]
 pub struct Fst<T>
-    where T: AsRef<[u8]>
+    where T: Borrow<[u8]>
 {
     bytecode: T,
 }
@@ -17,9 +17,9 @@ impl<'a> Fst<&'a [u8]> {
     }
 }
 
-impl<T: AsRef<[u8]>> Fst<T> {
+impl<T: Borrow<[u8]>> Fst<T> {
     pub fn run_iter<'a>(&'a self, input: &'a [u8]) -> Iter<'a> {
-        Iter::new(self.bytecode.as_ref(), input)
+        Iter::new(self.bytecode.borrow(), input)
     }
 
     pub fn run<'a>(&'a self, input: &'a [u8]) -> Vec<Accept> {
@@ -27,7 +27,7 @@ impl<T: AsRef<[u8]>> Fst<T> {
     }
 
     pub fn bytecode<'a>(&'a self) -> &'a [u8] {
-        self.bytecode.as_ref()
+        self.bytecode.borrow()
     }
 }
 

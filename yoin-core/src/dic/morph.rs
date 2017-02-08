@@ -1,12 +1,12 @@
 use std::fmt;
 use std::io::{self, Write};
-use std::convert::AsRef;
+use std::borrow::Borrow;
 
 use byteorder::{ByteOrder, NativeEndian, WriteBytesExt};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Morph<S>
-    where S: AsRef<str>
+    where S: Borrow<str>
 {
     pub surface: S,
     pub left_id: u16,
@@ -15,15 +15,15 @@ pub struct Morph<S>
     pub contents: S,
 }
 
-impl<S: AsRef<str>> Morph<S> {
+impl<S: Borrow<str>> Morph<S> {
     pub fn encode<W: Write, O: ByteOrder>(&self, mut w: W) -> io::Result<()> {
-        let surface_bytes = self.surface.as_ref().as_bytes();
+        let surface_bytes = self.surface.borrow().as_bytes();
         w.write_u32::<O>(surface_bytes.len() as u32)?;
         w.write_all(surface_bytes)?;
         w.write_u16::<O>(self.left_id)?;
         w.write_u16::<O>(self.right_id)?;
         w.write_i16::<O>(self.weight)?;
-        let contents_bytes = self.contents.as_ref().as_bytes();
+        let contents_bytes = self.contents.borrow().as_bytes();
         w.write_u32::<O>(contents_bytes.len() as u32)?;
         w.write_all(contents_bytes)?;
         Ok(())
@@ -63,15 +63,15 @@ impl<'a> Morph<&'a str> {
     }
 }
 
-impl<S: AsRef<str>> fmt::Display for Morph<S> {
+impl<S: Borrow<str>> fmt::Display for Morph<S> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f,
                "{},{},{},{},{}",
-               self.surface.as_ref(),
+               self.surface.borrow(),
                self.left_id,
                self.right_id,
                self.weight,
-               self.contents.as_ref())
+               self.contents.borrow())
     }
 }
 
