@@ -1,4 +1,4 @@
-use std::convert::AsRef;
+use std::borrow::Borrow;
 use std::iter::Iterator;
 
 mod matrix;
@@ -27,7 +27,7 @@ pub trait Dic<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct FstDic<T: AsRef<[u8]>> {
+pub struct FstDic<T: Borrow<[u8]>> {
     morph_bytes: T,
     fst: Fst<T>,
 }
@@ -42,12 +42,12 @@ impl<'a> FstDic<&'a [u8]> {
 }
 
 impl FstDic<Vec<u8>> {
-    pub fn build<S: AsRef<str>>(morphs: &[Morph<S>]) -> Self {
+    pub fn build<S: Borrow<str>>(morphs: &[Morph<S>]) -> Self {
         let mut morph_bytes = Vec::new();
         let mut fst_inputs = Vec::new();
         for morph in morphs {
             let offset = morph_bytes.len();
-            let surface = morph.surface.as_ref().as_bytes();
+            let surface = morph.surface.borrow().as_bytes();
             fst_inputs.push((surface, offset as u32));
             morph.encode_native(&mut morph_bytes).unwrap();
         }
@@ -60,12 +60,12 @@ impl FstDic<Vec<u8>> {
     }
 }
 
-impl<'a, T: AsRef<[u8]>> Dic<'a> for FstDic<T> {
+impl<'a, T: Borrow<[u8]>> Dic<'a> for FstDic<T> {
     type Iterator = Iter<'a>;
 
     fn lookup_iter(&'a self, input: &'a [u8]) -> Iter<'a> {
         Iter {
-            morph_bytes: self.morph_bytes.as_ref(),
+            morph_bytes: self.morph_bytes.borrow(),
             iter: self.fst.run_iter(input),
         }
     }

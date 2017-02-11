@@ -1,11 +1,11 @@
-use std::convert::AsRef;
+use std::borrow::Borrow;
 use std::io::{self, Write};
 use std::ops::{Index, IndexMut};
 
 use byteorder::{NativeEndian, WriteBytesExt, ByteOrder};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Matrix<T: AsRef<[i16]>> {
+pub struct Matrix<T: Borrow<[i16]>> {
     width: u16,
     height: u16,
     table: T,
@@ -21,11 +21,11 @@ impl Matrix<Vec<i16>> {
     }
 }
 
-impl<T: AsRef<[i16]>> Matrix<T> {
+impl<T: Borrow<[i16]>> Matrix<T> {
     pub fn encode<W: Write, O: ByteOrder>(&self, mut w: W) -> io::Result<()> {
         w.write_u16::<O>(self.width)?;
         w.write_u16::<O>(self.height)?;
-        for &byte in self.table.as_ref() {
+        for &byte in self.table.borrow() {
             w.write_i16::<O>(byte)?;
         }
         Ok(())
@@ -38,7 +38,7 @@ impl<T: AsRef<[i16]>> Matrix<T> {
     pub fn row(&self, left_id: u16) -> &[i16] {
         let h = left_id as usize;
         let start = h * self.width as usize;
-        &self.table.as_ref()[start..start + self.width as usize]
+        &self.table.borrow()[start..start + self.width as usize]
     }
 }
 
@@ -57,12 +57,12 @@ impl<'a> Matrix<&'a [i16]> {
     }
 }
 
-impl<T: AsRef<[i16]>> Index<(u16, u16)> for Matrix<T> {
+impl<T: Borrow<[i16]>> Index<(u16, u16)> for Matrix<T> {
     type Output = i16;
     fn index(&self, index: (u16, u16)) -> &i16 {
         let w = index.0 as usize;
         let h = index.1 as usize;
-        &self.table.as_ref()[w + h * self.width as usize]
+        &self.table.borrow()[w + h * self.width as usize]
     }
 }
 
