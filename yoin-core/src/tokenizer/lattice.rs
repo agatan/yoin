@@ -160,34 +160,34 @@ impl<'a> Lattice<'a> {
         self.add(!0, NodeKind::EOS);
     }
 
-    pub fn build(input: &'a str, sysdic: &'a SysDic) -> Self {
-        let mut la = Lattice::new(input.chars().count(), sysdic);
+    pub fn build(input: &'a str, sdic: &'a SysDic) -> Self {
+        let mut la = Lattice::new(input.chars().count(), sdic);
         let mut input_chars = input.chars();
         let mut byte_pos = 0;
 
         while !input_chars.as_str().is_empty() {
             let mut is_matched = false;
-            for m in sysdic.dic.lookup_str_iter(input_chars.as_str()) {
+            for m in sdic.dic.lookup_str_iter(input_chars.as_str()) {
                 is_matched = true;
                 la.add(byte_pos, NodeKind::Known(m));
             }
             let ch = input_chars.clone().next().unwrap();
-            let category = sysdic.unknown_dic.categorize(ch);
-            let cid = sysdic.unknown_dic.category_id(ch);
+            let category = sdic.unknown_dic.categorize(ch);
+            let cid = sdic.unknown_dic.category_id(ch);
             let input_str = input_chars.as_str();
 
             // if no morphs found or character category requires to invoke unknown search
             if !is_matched || category.invoke {
                 let mut end = ch.len_utf8();
                 let mut word_len = 1;
-                let entries = sysdic.unknown_dic.fetch_entries(cid);
+                let entries = sdic.unknown_dic.fetch_entries(cid);
                 if category.group {
                     while end < input_str.len() {
                         let c = match input_str[end..].chars().next() {
                             None => break,
                             Some(ch) => ch,
                         };
-                        if cid != sysdic.unknown_dic.category_id(c) {
+                        if cid != sdic.unknown_dic.category_id(c) {
                             break;
                         }
                         end += c.len_utf8();
@@ -209,7 +209,7 @@ impl<'a> Lattice<'a> {
                         match cloned_chars.next() {
                             None => break,
                             Some(c) => {
-                                if sysdic.unknown_dic.category_id(c) != cid {
+                                if sdic.unknown_dic.category_id(c) != cid {
                                     break;
                                 }
                                 p += c.len_utf8();
