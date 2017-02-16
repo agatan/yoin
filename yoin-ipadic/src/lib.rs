@@ -22,13 +22,16 @@ pub fn unkown_dic() -> CompiledUnkDic<'static> {
     unsafe { CompiledUnkDic::decode(UNKOWN) }
 }
 
-pub fn tokenizer() -> Tokenizer {
-    let sysdic = SysDic {
+pub fn sysdic() -> SysDic {
+    SysDic {
         dic: dictionary(),
         matrix: matrix(),
         unknown_dic: unkown_dic(),
-    };
-    Tokenizer::new(sysdic)
+    }
+}
+
+pub fn tokenizer<'a>() -> Tokenizer<'a> {
+    Tokenizer::new(sysdic())
 }
 
 #[cfg(test)]

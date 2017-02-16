@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use dic::{Dic, Morph};
+use dic::{Dic, Morph, FstDic};
 use dic::unknown::{UnknownDic, Entry, CharCategorize};
 use sysdic::SysDic;
 
@@ -160,13 +160,19 @@ impl<'a> Lattice<'a> {
         self.add(!0, NodeKind::EOS);
     }
 
-    pub fn build(input: &'a str, sdic: &'a SysDic) -> Self {
+    pub fn build(input: &'a str, sdic: &'a SysDic, udic: Option<&'a FstDic<&'a [u8]>>) -> Self {
         let mut la = Lattice::new(input.chars().count(), sdic);
         let mut input_chars = input.chars();
         let mut byte_pos = 0;
 
         while !input_chars.as_str().is_empty() {
             let mut is_matched = false;
+            if let Some(udic) = udic {
+                for m in udic.lookup_str_iter(input_chars.as_str()) {
+                    is_matched = true;
+                    la.add(byte_pos, NodeKind::Known(m));
+                }
+            }
             for m in sdic.dic.lookup_str_iter(input_chars.as_str()) {
                 is_matched = true;
                 la.add(byte_pos, NodeKind::Known(m));

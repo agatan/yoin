@@ -5,6 +5,7 @@ use std::fmt;
 mod lattice;
 use self::lattice::{Lattice, Node, NodeKind};
 use sysdic::SysDic;
+use dic::FstDic;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token<'a> {
@@ -62,17 +63,22 @@ impl<'a> Iterator for FeatureIter<'a> {
     }
 }
 
-pub struct Tokenizer {
+pub struct Tokenizer<'a> {
     sysdic: SysDic,
+    udic: Option<FstDic<&'a [u8]>>,
 }
 
-impl Tokenizer {
+impl<'a> Tokenizer<'a> {
     pub fn new(sysdic: SysDic) -> Self {
-        Tokenizer { sysdic: sysdic }
+        Tokenizer { sysdic: sysdic, udic: None }
     }
 
-    pub fn tokenize<'a>(&'a self, input: &'a str) -> Vec<Token<'a>> {
-        let la = Lattice::build(input, &self.sysdic);
+    pub fn with_udic<'b>(self, udic: FstDic<&'b [u8]>) -> Tokenizer<'b> {
+        Tokenizer { sysdic: self.sysdic, udic: Some(udic) }
+    }
+
+    pub fn tokenize(&'a self, input: &'a str) -> Vec<Token<'a>> {
+        let la = Lattice::build(input, &self.sysdic, self.udic.as_ref());
         la.into_output().into_iter().map(|node| Token::new(node)).collect()
     }
 }
