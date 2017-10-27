@@ -11,9 +11,6 @@ This is under development.
 """
 
 [dependencies]
-yoin-core = { path = "yoin-core" }
-yoin-ipadic = { path = "yoin-ipadic" }
+yoin-core = { version = "0.0.1", path = "yoin-core" }
+yoin-ipadic = { version = "0.0.1", path = "yoin-ipadic" }
 clap = "2.20"
-
-[profile.release]
-debug = true
