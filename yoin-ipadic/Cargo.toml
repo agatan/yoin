@@ -4,6 +4,7 @@ version = "0.0.1"
 authors = ["Naomichi Agata <agatan039@gmail.com>"]
 build = "build.rs"
 license-file = "LICENSE"
+description = "yoin-ipadic is a sub crate of yoin, Japanese morphological analyzer written in pure Rust"
 
 [dependencies]
 yoin-core = { version = "0.0.1", path = "../yoin-core" }
