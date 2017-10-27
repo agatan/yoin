@@ -6,7 +6,7 @@ build = "build.rs"
 license-file = "LICENSE"
 
 [dependencies]
-yoin-core = { path = "../yoin-core" }
+yoin-core = { version = "0.0.1", path = "../yoin-core" }
 
 [build-dependencies]
 bzip2 = "0.3"
