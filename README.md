@@ -1,8 +1,7 @@
 ## Yoin - A Japanese Morphological Analyzer
 
 [![Build Status](https://travis-ci.org/agatan/yoin.svg?branch=master)](https://travis-ci.org/agatan/yoin)
-
-*This is still under development...*
+[![Version info](https://img.shields.io/crates/v/yoin.svg)](https://crates.io/crates/yoin)
 
 `yoin` is a Japanese morphological analyze engine written in pure Rust.
 
@@ -23,11 +22,15 @@ EOS
 
 ## Build & Install
 
-*`yoin` is unavailable on [crates.io](https://crates.io), because dictionary data is too big...*
+*`yoin` is available on [crates.io](https://crates.io)*
 
 ### CLI
 
 ```sh
+:) $ cargo install yoin
+
+# or
+
 :) $ git clone https://github.com/agatan/yoin
 :) $ cd yoin && cargo install
 ```
@@ -38,7 +41,7 @@ yoin can be included in your Cargo project like this:
 
 ```toml
 [dependencies]
-yoin = { git = "https://github.com/agatan/yoin" }
+yoin = "*"
 ```
 
 and write your code like this:
