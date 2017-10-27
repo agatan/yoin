@@ -4,6 +4,7 @@ version = "0.0.1"
 authors = ["Naomichi Agata <agatan039@gmail.com>"]
 readme = "README.md"
 license-file = "LICENSE"
+description = "yoin-core is a sub crate of yoin, Japanese morphological analyzer written in pure Rust"
 
 [dependencies]
 byteorder = "1.0.0"
