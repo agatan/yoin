@@ -9,6 +9,8 @@ description = """
 Yoin is a Japanese morphological analyzer written in pure Rust.
 This is under development.
 """
+homepage = "https://github.com/agatan/yoin"
+repository = "https://github.com/agatan/yoin"
 
 [dependencies]
 yoin-core = { version = "0.0.1", path = "yoin-core" }
