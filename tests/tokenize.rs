@@ -1,4 +1,4 @@
-extern crate yoin;
+use yoin;
 
 #[test]
 fn tokenize_works() {

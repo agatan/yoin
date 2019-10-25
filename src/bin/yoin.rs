@@ -1,11 +1,11 @@
-extern crate clap;
+
 
 use std::io;
 use std::fs::File;
 
 use clap::{Arg, App};
 
-extern crate yoin;
+use yoin;
 
 use yoin::ipadic;
 

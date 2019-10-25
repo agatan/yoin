@@ -3,7 +3,7 @@ extern crate test;
 
 use test::Bencher;
 
-extern crate yoin;
+
 use yoin::ipadic;
 
 #[bench]

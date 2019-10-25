@@ -17,8 +17,8 @@
 //!     }
 //! }
 //! ```
-extern crate yoin_core as core;
-pub extern crate yoin_ipadic as ipadic;
+use yoin_core as core;
+pub use yoin_ipadic as ipadic;
 
 pub const VERSION: &'static str = "0.0.1";
 
